@@ -136,6 +136,17 @@
   border-bottom: 1px dashed var(--border-color);
 }
 
+.fullTextContainer {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent-primary);
+  font-family: inherit; /* Inherits elegant Outfit font */
+  color: var(--text-muted);
+  font-size: 1rem;
+  margin-top: 1rem;
+}
+
 .meta span {
   display: flex;
   align-items: center;
