@@ -1,0 +1,176 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.header {
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.backLink:hover {
+  color: var(--accent-primary);
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  color: var(--foreground);
+}
+
+.header p {
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.cardHighlight {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.05);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, var(--surface-1) 100%);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.profileInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.userIcon {
+  color: var(--text-muted);
+  background: var(--surface-2);
+  padding: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+}
+
+.profileInfo h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.2rem;
+}
+
+.profileInfo p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.verdictBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.verdictBadge[data-verdict="Converted"] {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+}
+.verdictBadge[data-verdict="Waitlisted"] {
+  background: rgba(234, 179, 8, 0.1);
+  color: #facc15;
+}
+.verdictBadge[data-verdict="Rejected"] {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+.verdictBadge[data-verdict="Unknown"] {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.meta {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qaSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.qaItem {
+  background: var(--surface-2);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border-left: 2px solid var(--border-color);
+}
+
+.question {
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+}
+
+.answer {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+}

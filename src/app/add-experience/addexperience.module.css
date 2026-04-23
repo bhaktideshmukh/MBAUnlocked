@@ -1,0 +1,182 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.header p {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.formSection {
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border-color);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sectionHeader h3 {
+  color: var(--accent-primary);
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.sectionHint {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-top: -0.5rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--foreground);
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: var(--surface-2);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.checkboxLabel:hover {
+  border-color: var(--accent-primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formGroup label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.qaList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.qaBox {
+  background: var(--surface-2);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.qaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qaHeader h4 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color var(--transition-fast);
+  outline: none;
+}
+
+.textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.addBtn {
+  width: 100%;
+}
+
+.submitSection {
+  text-align: center;
+}
+
+.successCard {
+  text-align: center;
+  background: var(--surface-1);
+  padding: 4rem 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--accent-primary);
+  box-shadow: 0 0 40px rgba(139, 92, 246, 0.1);
+}
+
+.successCard h2 {
+  font-size: 2.5rem;
+  color: var(--accent-primary);
+  margin-bottom: 1rem;
+}
+
+.successCard p {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}

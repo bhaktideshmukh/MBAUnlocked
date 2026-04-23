@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  transcripts  Transcript[]
+  createdAt    DateTime     @default(now())
+}
+
+model Transcript {
+  id            String             @id @default(uuid())
+  collegeId     String
+  category      String
+  gradField     String
+  gender        String
+  catPercentile Float
+  panelSize     Int
+  date          DateTime
+  verdict       String
+  anonymous     Boolean            @default(false)
+  contactInfo   String?
+  questions     QuestionAnswer[]
+  
+  userId        String?
+  user          User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime           @default(now())
+}
+
+model QuestionAnswer {
+  id           String     @id @default(uuid())
+  q            String
+  a            String
+  transcriptId String
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+}
