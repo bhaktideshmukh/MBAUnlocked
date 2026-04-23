@@ -37,8 +37,15 @@ export default function QuestionnairePage({ params }: { params: Promise<{ colleg
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.formCard}>
+    <div 
+      className={styles.container} 
+      onClick={() => router.push('/colleges')}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 80px)', background: 'rgba(0,0,0,0.5)', zIndex: 100 }}
+    >
+      <div 
+        className={styles.formCard}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.header}>
           <h2>Profile Questionnaire</h2>
           <p>Help us find the best interview transcripts for {college.name} based on your profile.</p>

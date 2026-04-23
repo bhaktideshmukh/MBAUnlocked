@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, User, PlusCircle } from 'lucide-react';
 import styles from './Navbar.module.css';
 
-export default function Navbar() {
+export default function Navbar({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -31,8 +31,17 @@ export default function Navbar() {
           </Link>
         </nav>
         <div className={styles.authActions}>
-          <Link href="/auth" className="btn btn-secondary">Login</Link>
-          <Link href="/auth" className="btn btn-primary">Sign Up</Link>
+          {isLoggedIn ? (
+            <div className={`${styles.link} ${styles.active}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <User size={18} />
+              <span>Profile</span>
+            </div>
+          ) : (
+            <>
+              <Link href="/auth" className="btn btn-secondary">Login</Link>
+              <Link href="/auth" className="btn btn-primary">Sign Up</Link>
+            </>
+          )}
         </div>
       </div>
     </header>

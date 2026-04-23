@@ -20,14 +20,14 @@ export default function AddExperiencePage() {
     anonymous: false,
     verdict: 'Unknown',
     panelSize: 2,
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    fullText: ''
   });
 
-  const [questions, setQuestions] = useState([{ q: '', a: '' }]);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const checked = (e.target as HTMLInputElement).checked;
     
@@ -37,20 +37,12 @@ export default function AddExperiencePage() {
     }));
   };
 
-  const handleQuestionChange = (index: number, field: 'q' | 'a', value: string) => {
-    const newQs = [...questions];
-    newQs[index][field] = value;
-    setQuestions(newQs);
-  };
-
-  const addQuestion = () => setQuestions([...questions, { q: '', a: '' }]);
-  const removeQuestion = (index: number) => setQuestions(questions.filter((_, i) => i !== index));
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    const result = await addExperienceAction(formData, questions);
+    // We send an empty questions array because we deleted the QA model usage for the form
+    const result = await addExperienceAction(formData, []);
     if (result.error) {
       setError(result.error);
     } else {
@@ -166,47 +158,25 @@ export default function AddExperiencePage() {
           </div>
         </section>
 
-        {/* Q&A Section */}
+        {/* Full Text Transcript Section */}
         <section className={styles.formSection}>
           <div className={styles.sectionHeader}>
-            <h3>3. Transcript (Q&A)</h3>
-            <p className={styles.sectionHint}>Add the questions you were asked and how you answered them.</p>
+            <h3>3. Full Transcript</h3>
+            <p className={styles.sectionHint}>Share your complete interview experience as a story. Paste it exactly as it happened.</p>
           </div>
 
           <div className={styles.qaList}>
-            {questions.map((item, idx) => (
-              <div key={idx} className={styles.qaBox}>
-                <div className={styles.qaHeader}>
-                  <h4>Question {idx + 1}</h4>
-                  {questions.length > 1 && (
-                    <button type="button" onClick={() => removeQuestion(idx)} className={styles.removeBtn}>
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="What was asked?" 
-                  value={item.q} 
-                  onChange={(e) => handleQuestionChange(idx, 'q', e.target.value)} 
-                  required 
-                />
-                <textarea 
-                  className={styles.textarea} 
-                  placeholder="Your answer..." 
-                  value={item.a} 
-                  onChange={(e) => handleQuestionChange(idx, 'a', e.target.value)} 
-                  required 
-                  rows={3}
-                />
-              </div>
-            ))}
+            <textarea 
+              name="fullText"
+              className={styles.textarea} 
+              placeholder="Start typing your interview experience..." 
+              value={formData.fullText} 
+              onChange={handleChange} 
+              required 
+              rows={12}
+              style={{ padding: '1rem' }}
+            />
           </div>
-          
-          <button type="button" onClick={addQuestion} className={`btn btn-secondary ${styles.addBtn}`}>
-            <Plus size={16} /> Add Another Question
-          </button>
         </section>
 
         <div className={styles.submitSection}>

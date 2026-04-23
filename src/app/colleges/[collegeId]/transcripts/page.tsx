@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { ArrowLeft, User, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import styles from './transcripts.module.css';
 
+import TranscriptCard from '@/components/TranscriptCard';
+
 export default async function TranscriptsPage({
   params,
   searchParams,
@@ -18,7 +20,7 @@ export default async function TranscriptsPage({
     return <div className="p-8 text-center">College not found</div>;
   }
 
-  const sp = await Promise.resolve(searchParams || {});
+  const sp = (await Promise.resolve(searchParams || {})) as Record<string, string | string[] | undefined>;
 
   const cat = sp.category as string;
   const grad = sp.gradField as string;
@@ -52,45 +54,6 @@ export default async function TranscriptsPage({
   const similarMatches = scoredTranscripts.filter(s => s.score > 0 && s.score < 30).map(s => s.transcript);
   const allOther = scoredTranscripts.filter(s => s.score === 0).map(s => s.transcript);
 
-  const renderTranscriptCard = (t: any, highlight: boolean = false) => (
-    <div key={t.id} className={`${styles.card} ${highlight ? styles.cardHighlight : ''}`}>
-      <div className={styles.cardHeader}>
-        <div className={styles.profileInfo}>
-          <User size={24} className={styles.userIcon} />
-          <div>
-            <h3>{t.anonymous ? 'Anonymous' : (t.contactInfo || 'Candidate')} • {t.catPercentile}%ile</h3>
-            <p>{t.category} • {t.gradField} • {t.gender}</p>
-          </div>
-        </div>
-        <div className={styles.verdictBadge} data-verdict={t.verdict}>
-          {t.verdict === 'Converted' && <CheckCircle size={16} />}
-          {t.verdict === 'Waitlisted' && <Clock size={16} />}
-          {t.verdict === 'Rejected' && <XCircle size={16} />}
-          <span>{t.verdict}</span>
-        </div>
-      </div>
-      
-      <div className={styles.meta}>
-        <span><Calendar size={14} /> Panel Size: {t.panelSize}</span>
-        <span>Date: {new Date(t.date).toLocaleDateString()}</span>
-      </div>
-
-      <div className={styles.qaSection}>
-        {t.fullText && (
-          <div className={styles.fullTextContainer} style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-            {t.fullText}
-          </div>
-        )}
-        {!t.fullText && t.questions.map((q: any, idx: number) => (
-          <div key={q.id || idx} className={styles.qaItem}>
-            <p className={styles.question}><strong>Q:</strong> {q.q}</p>
-            <p className={styles.answer}><strong>A:</strong> {q.a}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -106,14 +69,14 @@ export default async function TranscriptsPage({
         {hasProfile && exactMatches.length > 0 && (
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>🎯 Exact Matches</h2>
-            {exactMatches.map(t => renderTranscriptCard(t, true))}
+            {exactMatches.map(t => <TranscriptCard key={t.id} t={t} highlight={true} />)}
           </section>
         )}
 
         {hasProfile && similarMatches.length > 0 && (
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>🔍 Similar Profiles</h2>
-            {similarMatches.map(t => renderTranscriptCard(t, false))}
+            {similarMatches.map(t => <TranscriptCard key={t.id} t={t} highlight={false} />)}
           </section>
         )}
 
@@ -122,8 +85,8 @@ export default async function TranscriptsPage({
             <h2 className={styles.sectionTitle}>
               {hasProfile ? 'Other Transcripts' : 'All Transcripts'}
             </h2>
-            {allOther.length > 0 ? allOther.map(t => renderTranscriptCard(t, false)) : (
-              !hasProfile && dbTranscripts.map(t => renderTranscriptCard(t, false))
+            {allOther.length > 0 ? allOther.map(t => <TranscriptCard key={t.id} t={t} highlight={false} />) : (
+              !hasProfile && dbTranscripts.map(t => <TranscriptCard key={t.id} t={t} highlight={false} />)
             )}
             {dbTranscripts.length === 0 && (
               <div className={styles.empty}>No transcripts available yet. Be the first to add one!</div>

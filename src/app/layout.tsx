@@ -7,15 +7,20 @@ export const metadata: Metadata = {
   description: "Find your exact match. Read interview transcripts from top IIMs and other b-schools based on your exact profile.",
 };
 
-export default function RootLayout({
+import { getSession } from "@/lib/auth";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+  const isLoggedIn = !!session;
+
   return (
     <html lang="en">
       <body className="animate-fade-in">
-        <Navbar />
+        <Navbar isLoggedIn={isLoggedIn} />
         <main style={{ flex: 1 }}>
           {children}
         </main>

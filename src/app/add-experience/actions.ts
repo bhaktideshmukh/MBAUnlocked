@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
-export async function addExperienceAction(formDataRaw: any, questions: {q: string, a: string}[]) {
+export async function addExperienceAction(formDataRaw: any, _: any) {
   const session = await getSession();
   if (!session || !session.userId) {
     return { error: 'Authentication required' };
@@ -25,9 +25,7 @@ export async function addExperienceAction(formDataRaw: any, questions: {q: strin
         anonymous: formDataRaw.anonymous === 'yes' || formDataRaw.anonymous === true,
         contactInfo: formDataRaw.contactInfo || null,
         userId: userId,
-        questions: {
-          create: questions.map(q => ({ q: q.q, a: q.a }))
-        }
+        fullText: formDataRaw.fullText || null
       }
     });
 
