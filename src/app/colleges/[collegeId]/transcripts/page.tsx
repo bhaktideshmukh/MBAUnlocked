@@ -76,7 +76,12 @@ export default async function TranscriptsPage({
       </div>
 
       <div className={styles.qaSection}>
-        {t.questions.map((q: any, idx: number) => (
+        {t.fullText && (
+          <div className={styles.fullTextContainer} style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+            {t.fullText}
+          </div>
+        )}
+        {!t.fullText && t.questions.map((q: any, idx: number) => (
           <div key={q.id || idx} className={styles.qaItem}>
             <p className={styles.question}><strong>Q:</strong> {q.q}</p>
             <p className={styles.answer}><strong>A:</strong> {q.a}</p>

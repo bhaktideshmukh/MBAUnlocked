@@ -65,10 +65,6 @@ async function scrapeReddit(url: string) {
       
       const parsed = parseRawBody(`${title} ${selftext}`);
 
-      if (parsed.questionsPart.length === 0) {
-        parsed.questionsPart.push({ q: "What was your interview experience like?", a: "See the original poster's full Reddit response." })
-      }
-
       await prisma.transcript.create({
         data: {
           collegeId: parsed.collegeId,
@@ -81,9 +77,7 @@ async function scrapeReddit(url: string) {
           verdict: parsed.verdict,
           anonymous: false,
           contactInfo: `reddit.com/u/${author}`,
-          questions: {
-            create: parsed.questionsPart
-          }
+          fullText: `${title}\n\n${selftext}`
         }
       });
       console.log(`[Scrape] ✅ Inserted Transcript from ${author}`);

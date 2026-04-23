@@ -28,6 +28,7 @@ model Transcript {
   verdict       String
   anonymous     Boolean            @default(false)
   contactInfo   String?
+  fullText      String?            // Raw unedited transcript text
   questions     QuestionAnswer[]
   
   userId        String?
