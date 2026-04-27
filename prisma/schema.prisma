@@ -22,7 +22,8 @@ model Transcript {
   category      String
   gradField     String
   gender        String
-  catPercentile Float
+  catPercentile String
+  workExperience String @default("NA")
   panelSize     Int
   date          DateTime
   verdict       String

@@ -32,9 +32,9 @@ export default function TranscriptCard({ t, highlight = false }: { t: any, highl
                 ) : 'Candidate'
               )} 
               <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>•</span> 
-              {t.catPercentile}%ile
+              {t.catPercentile !== 'NA' ? `${t.catPercentile}%ile` : 'Percentile: NA'}
             </h3>
-            <p>{t.category} • {t.gradField} • {t.gender}</p>
+            <p>{t.category} • {t.gradField} • {t.gender} • Work Ex: {t.workExperience !== 'NA' ? (t.workExperience === '0' ? 'Fresher' : t.workExperience + ' months') : 'NA'}</p>
           </div>
         </div>
         

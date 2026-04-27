@@ -15,7 +15,7 @@ export default async function TranscriptsPage({
 }) {
   const { collegeId } = await params;
   const college = COLLEGES.find(c => c.id === collegeId);
-  
+
   if (!college) {
     return <div className="p-8 text-center">College not found</div>;
   }
@@ -26,7 +26,7 @@ export default async function TranscriptsPage({
   const grad = sp.gradField as string;
   const gen = sp.gender as string;
   const percentileStr = sp.catPercentile as string;
-  
+
   const hasProfile = Boolean(cat || grad || gen || percentileStr);
   const userPercentile = percentileStr ? parseFloat(percentileStr) : null;
 
@@ -42,7 +42,7 @@ export default async function TranscriptsPage({
       if (t.category === cat) score += 10;
       if (t.gradField === grad) score += 10;
       if (t.gender === gen) score += 10;
-      if (userPercentile && Math.abs(t.catPercentile - userPercentile) <= 2) score += 5;
+      if (userPercentile && t.catPercentile !== 'NA' && !isNaN(parseFloat(t.catPercentile)) && Math.abs(parseFloat(t.catPercentile) - userPercentile) <= 2) score += 5;
     }
     return { transcript: t, score };
   });

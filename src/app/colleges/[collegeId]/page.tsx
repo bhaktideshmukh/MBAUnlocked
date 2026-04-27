@@ -79,10 +79,9 @@ export default function QuestionnairePage({ params }: { params: Promise<{ colleg
           <div className={styles.formGroup}>
             <label>CAT Percentile</label>
             <input 
-              type="number" 
-              step="0.01" 
+              type="text" 
               name="catPercentile" 
-              placeholder="e.g. 99.5" 
+              placeholder="e.g. 99.5 or NA" 
               className="input-field" 
               value={formData.catPercentile} 
               onChange={handleChange} 

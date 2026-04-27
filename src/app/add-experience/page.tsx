@@ -21,6 +21,7 @@ export default function AddExperiencePage() {
     verdict: 'Unknown',
     panelSize: 2,
     date: new Date().toISOString().split('T')[0],
+    workExperience: '',
     fullText: ''
   });
 
@@ -30,7 +31,7 @@ export default function AddExperiencePage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -40,7 +41,7 @@ export default function AddExperiencePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // We send an empty questions array because we deleted the QA model usage for the form
     const result = await addExperienceAction(formData, []);
     if (result.error) {
@@ -120,7 +121,11 @@ export default function AddExperiencePage() {
             </div>
             <div className={styles.formGroup}>
               <label>CAT Percentile</label>
-              <input type="number" step="0.01" name="catPercentile" className="input-field" value={formData.catPercentile} onChange={handleChange} required placeholder="e.g. 99.5" />
+              <input type="text" name="catPercentile" className="input-field" value={formData.catPercentile} onChange={handleChange} required placeholder="e.g. 99.5 or NA" />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Work Experience (Months or 0 if fresher)</label>
+              <input type="text" name="workExperience" className="input-field" value={formData.workExperience} onChange={handleChange} required placeholder="e.g. 0 for Fresher, or 24" />
             </div>
           </div>
         </section>
@@ -166,13 +171,13 @@ export default function AddExperiencePage() {
           </div>
 
           <div className={styles.qaList}>
-            <textarea 
+            <textarea
               name="fullText"
-              className={styles.textarea} 
-              placeholder="Start typing your interview experience..." 
-              value={formData.fullText} 
-              onChange={handleChange} 
-              required 
+              className={styles.textarea}
+              placeholder="Start typing your interview experience..."
+              value={formData.fullText}
+              onChange={handleChange}
+              required
               rows={12}
               style={{ padding: '1rem' }}
             />

@@ -206,12 +206,13 @@ Verdict : Converted in First List`;
       category: 'General',
       gradField: 'Non-Engineer', // GNEM
       gender: 'Male',
-      catPercentile: 99.98,
+      catPercentile: '99.98',
+      workExperience: '0',
       panelSize: 3,
       date: new Date('2026-02-25'),
       verdict: 'Converted',
-      anonymous: false,
-      contactInfo: 'reddit.com/u/candidateX',
+      anonymous: true,
+      contactInfo: 'NA',
       fullText: realText
     }
   });

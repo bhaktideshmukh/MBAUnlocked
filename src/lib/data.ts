@@ -17,10 +17,11 @@ export type Transcript = {
   category: string;
   gradField: string;
   gender: string;
-  catPercentile: number;
+  catPercentile: string;
   panelSize: number;
   date: string;
-  verdict: 'Converted' | 'Waitlisted' | 'Rejected' | 'Unknown';
+  verdict: 'Converted' | 'Waitlisted' | 'Rejected' | 'Unknown' | 'NA';
+  workExperience?: string;
   questions: { q: string; a: string }[];
   anonymous?: boolean;
   contactInfo?: string;
@@ -33,7 +34,7 @@ export const TRANSCRIPTS: Transcript[] = [
     category: 'General',
     gradField: 'Engineer',
     gender: 'Male',
-    catPercentile: 99.8,
+    catPercentile: '99.8',
     panelSize: 3,
     date: '2025-02-15',
     verdict: 'Converted',
@@ -50,7 +51,7 @@ export const TRANSCRIPTS: Transcript[] = [
     category: 'OBC',
     gradField: 'Commerce',
     gender: 'Female',
-    catPercentile: 97.5,
+    catPercentile: '97.5',
     panelSize: 2,
     date: '2025-03-01',
     verdict: 'Waitlisted',
@@ -66,7 +67,7 @@ export const TRANSCRIPTS: Transcript[] = [
     category: 'SC',
     gradField: 'Arts',
     gender: 'Male',
-    catPercentile: 94.2,
+    catPercentile: '94.2',
     panelSize: 3,
     date: '2025-02-28',
     verdict: 'Converted',
@@ -82,7 +83,7 @@ export const TRANSCRIPTS: Transcript[] = [
     category: 'General',
     gradField: 'Engineer',
     gender: 'Male',
-    catPercentile: 99.9,
+    catPercentile: '99.9',
     panelSize: 2,
     date: '2025-03-10',
     verdict: 'Unknown',

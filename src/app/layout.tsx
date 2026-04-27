@@ -19,7 +19,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className="animate-fade-in">
+      <body className="animate-fade-in" suppressHydrationWarning>
         <Navbar isLoggedIn={isLoggedIn} />
         <main style={{ flex: 1 }}>
           {children}
