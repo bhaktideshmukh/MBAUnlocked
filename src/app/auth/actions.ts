@@ -39,3 +39,9 @@ export async function registerAction(formData: FormData) {
   await setSession(newUser.id);
   return { success: true };
 }
+
+export async function logoutAction() {
+  const { destroySession } = await import('@/lib/auth');
+  await destroySession();
+  return { success: true };
+}

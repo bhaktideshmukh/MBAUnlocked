@@ -22,7 +22,7 @@ const REDDIT_UA = 'mbaunlocked-scraper/1.0 (educational project)';
 const MAX_RETRIES = 1;           // fail fast on 429 — open circuit quickly
 const REDDIT_DELAY_MS = 2000;   // between Reddit requests
 const GEMINI_DELAY_MS = 4500;   // ~13 RPM — within free-tier 15 RPM limit
-const MIN_CHARS = 800;    // minimum body length — transcripts are always long
+const MIN_CHARS = 200;    // minimum body length — transcripts are always long
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? '';
 const RESET_BEFORE_SCRAPE = process.env.RESET_BEFORE_SCRAPE === 'true';
 const REDDIT_CIRCUIT_429_THRESHOLD = 2;
@@ -128,7 +128,7 @@ function normalise(s: string) { return s.replace(/\s+/g, ' ').trim(); }
 function toWordBoundaryRegex(alias: string, flags = 'i'): RegExp {
   const escaped = alias
     .replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
-    .replace(/\s+/g, '\\s+');
+    .replace(/\s+/g, '[\\s\\-]*'); // Allow space, hyphen, or nothing between words
   return new RegExp(`(?<![a-z])${escaped}(?![a-z])`, flags);
 }
 
@@ -183,18 +183,45 @@ function detectCollege(title: string, body: string): string | null {
 
   // ── Step 2: frequency count over full text ─────────────────────────────────
   const counts = new Map<string, number>(SUPPORTED_COLLEGES.map(c => [c.id, 0]));
+  let noiseScore = 0;
+
+  // Count noise mentions to avoid false positives (e.g. FMS transcripts mentioning IIM A rejects)
+  for (const n of GLOBAL_NOISE) {
+    const hits = lowerFull.match(toWordBoundaryRegex(n, 'gi'));
+    if (hits) noiseScore += hits.length;
+  }
+
   for (const col of SUPPORTED_COLLEGES) {
     const noise = col.noiseAliases.some(n => toWordBoundaryRegex(n, 'gi').test(lowerFull));
     if (noise) continue;
     for (const alias of col.aliases) {
       const hits = lowerFull.match(toWordBoundaryRegex(alias, 'gi'));
-      if (hits) counts.set(col.id, (counts.get(col.id) ?? 0) + hits.length);
+      if (hits) counts.set(col.id, (counts.get(col.id) ?? 0) + (hits?.length ?? 0));
     }
   }
 
   const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   const [topId, topCount] = sorted[0];
+
   if (topCount === 0) return null;
+
+  // If noise mentions are more frequent than supported college mentions, reject.
+  if (noiseScore > topCount) return null;
+
+  // ── Step 3: Specific "Converted" / "Rejected" Sentiment Check ───────────────
+  // If a noise college is mentioned as "converted" or "joined", and the top supported 
+  // college is NOT, reject. (Example: "IIM A reject, FMS convert")
+  const noiseConverted = GLOBAL_NOISE.some(n => 
+    new RegExp(`(?:converted|into|joined|in at|finalized)\\s+${n}`, 'i').test(lowerFull) ||
+    new RegExp(`${n}\\s+(?:converted|convert)`, 'i').test(lowerFull)
+  );
+  
+  if (noiseConverted) {
+    const topSupportedConverted = new RegExp(`(?:converted|into|joined|in at|finalized)\\s+${topId}`, 'i').test(lowerFull) ||
+                                  new RegExp(`${topId}\\s+(?:converted|convert)`, 'i').test(lowerFull);
+    if (!topSupportedConverted) return null;
+  }
+
   const [, secondCount] = sorted[1] ?? ['', 0];
   // Strict: only return if top college is unambiguously dominant
   if (topCount === secondCount) return null;
@@ -230,14 +257,16 @@ const BODY_SIGNALS: RegExp[] = [
   /panelist/i,
   /p1\s*:/i, /p2\s*:/i, /p3\s*:/i,   // common panelist notation
   /m1\s*:/i, /m2\s*:/i,
+  /f1\s*:/i, /f2\s*:/i,
+  /m\s*:/i, /f\s*:/i,
+  /bad\s*cop/i, /good\s*cop/i,
 ];
 
 const STRONG_TRANSCRIPT_LINE_PATTERNS: RegExp[] = [
-  /^\s*(?:p|m)\d+\s*:/gim,
-  /^\s*(?:panel|interviewer)\s*\d*\s*:/gim,
+  /^\s*(?:p|m|f|me|i|interviewer|panelist|panel|bad cop|good cop)\d*\s*[-:)]/gim,
   /^\s*(?:date|cat percentile|percentile|workex|work experience|ug stream|awt|wat)\s*:/gim,
 ];
-const MIN_INTERVIEWER_TURNS = 4;
+const MIN_INTERVIEWER_TURNS = 2;
 const MIN_QNA_PAIRS = 4;
 
 function countRegexMatches(text: string, regex: RegExp) {
@@ -273,8 +302,7 @@ function transcriptStructureScore(title: string, body: string) {
 }
 
 function interviewerTurnCount(text: string) {
-  return countRegexMatches(text, /^\s*(?:p|m)\d+\s*:/gim)
-    + countRegexMatches(text, /^\s*(?:panel|interviewer)\s*\d*\s*:/gim);
+  return countRegexMatches(text, /^\s*(?:p|m|i|f|me|interviewer|panelist|panel|bad cop|good cop)\d*\s*[-:)]/gim);
 }
 
 /**
@@ -282,18 +310,72 @@ function interviewerTurnCount(text: string) {
  * This eliminates celebration posts, advice posts, and short mention posts.
  */
 function hasDialogueLines(body: string): boolean {
-  // Match lines that start with M1/M2/P1/P2/Me followed by - or :
-  const dialoguePattern = /^\s*(?:m\d+|p\d+|me)\s*[-:]/gim;
-  const matches = body.match(dialoguePattern);
-  return (matches?.length ?? 0) >= MIN_INTERVIEWER_TURNS;
+  const patterns = [
+    /^\s*(?:m\d+|p\d+|me|i|c|a|x|interviewer|panelist|panel|bad cop|good cop)\s*[-:)]/gim,
+    /\b(interviewer|panelist|they asked|he asked|she asked|asked me|told me|replied)\b/i,
+    /^\s*[•*-]\s*(?:m\d+|p\d+|me|i|c|a|x|interviewer|panelist)/gim, // bullet points
+  ];
+
+  return patterns.some(p => p.test(body));
+}
+
+/**
+ * Identifies high-confidence titles that should bypass some signal checks.
+ * Handles variations like "IIM A PGDM Transcript", "FABM", "Score my IIM A interview".
+ */
+function isPotentialTranscriptTitle(title: string): boolean {
+  const lower = title.toLowerCase();
+  if (hasNoise(lower)) return false;
+
+  const keywords = [
+    'transcript', 'experience', 'pi ', ' pi', 'gdpi', 'wat', 'awt', 'interview',
+    'pgp', 'fabm', 'stress', 'score'
+  ];
+  const hasKeyword = keywords.some(kw => lower.includes(kw));
+  
+  const isIIMA = SUPPORTED_COLLEGES.find(c => c.id === 'iima')?.aliases.some(a =>
+    toWordBoundaryRegex(a).test(lower)
+  ) ?? false;
+
+  return hasKeyword && isIIMA;
+}
+
+function isStrongTitle(title: string): boolean {
+  const lower = title.toLowerCase();
+  if (hasNoise(lower)) return false;
+
+  // Very specific transcript indicators
+  const explicitKeywords = [
+    'transcript', 'detailed transcript', 'pi transcript', 'interview transcript',
+    'gdpi transcript', 'transcript converted', 'interview experience'
+  ];
+  const hasExplicitKeyword = explicitKeywords.some(kw => lower.includes(kw));
+
+  const isIIMA = SUPPORTED_COLLEGES.find(c => c.id === 'iima')?.aliases.some(a =>
+    toWordBoundaryRegex(a).test(lower)
+  ) ?? false;
+
+  if (!isIIMA) return false;
+
+  // If it has an explicit transcript keyword, it's strong
+  if (hasExplicitKeyword) return true;
+
+  // Handle "IIM A Interview" or "Score my IIM A interview"
+  const interviewKeywords = ['interview', 'pi ', ' pi', 'gdpi'];
+  const hasInterview = interviewKeywords.some(kw => lower.includes(kw));
+  
+  // Require interview keyword + some detail indicator
+  const detailIndicators = ['detailed', 'gone bad', 'stress', 'experience', 'questions'];
+  const hasDetail = detailIndicators.some(d => lower.includes(d));
+
+  return (hasInterview && hasDetail);
 }
 
 function isLikelyTranscript(title: string, body: string): boolean {
   const combined = `${title}\n${body}`;
   if (combined.trim().length < MIN_CHARS) return false;
 
-  // HARD REQUIREMENT: must have actual dialogue lines in the body
-  if (!hasDialogueLines(body)) return false;
+  if (isStrongTitle(title)) return true;
 
   const lowerTitle = title.toLowerCase();
   const lowerBody = body.toLowerCase();
@@ -305,13 +387,9 @@ function isLikelyTranscript(title: string, body: string): boolean {
   const signalHits = BODY_SIGNALS.reduce(
     (n, re) => n + (re.test(lowerBody) ? 1 : 0), 0,
   );
-  const fullText = `${title}\n${body}`;
-  const turns = interviewerTurnCount(fullText);
 
-  // Must have keyword OR strong signals, plus confirmed dialogue lines (already checked above)
-  if (hasKeyword && signalHits >= 2 && turns >= MIN_INTERVIEWER_TURNS) return true;
-  if (signalHits >= 5 && turns >= MIN_INTERVIEWER_TURNS) return true;
-  return false;
+  // Loose filter: just need a keyword or a few signals
+  return (hasKeyword || signalHits >= 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -342,7 +420,8 @@ function regexExtractProfile(text: string, collegeId: string): ExtractedProfile 
 
   // Category
   let category = 'General';
-  if (/\b(obc|other\s*backward)\b/i.test(text)) category = 'OBC';
+  if (/\b(nc-?obc|obc-ncl|non-creamy)\b/i.test(text)) category = 'NC-OBC';
+  else if (/\b(obc|other\s*backward)\b/i.test(text)) category = 'OBC';
   else if (/\bsc\b|\bscheduled\s*caste\b/i.test(text)) category = 'SC';
   else if (/\bst\b|\bscheduled\s*tribe\b/i.test(text)) category = 'ST';
   else if (/\bews\b|\beconomically\s*weaker\b/i.test(text)) category = 'EWS';
@@ -353,6 +432,7 @@ function regexExtractProfile(text: string, collegeId: string): ExtractedProfile 
     /\b(100(?:\.0+)?|[0-9]{1,2}(?:\.[0-9]{1,2})?)\s*(?:%ile|percentile)\b/i,
     /\bcat\s*[:\-=]?\s*([0-9]{2,3}(?:\.[0-9]{1,2})?)\s*(?:%ile|percentile)/i,
     /percentile\s*(?:of\s*)?([0-9]{2,3}(?:\.[0-9]{1,2})?)\b/i,
+    /\b([0-9]{2,3}(?:\.[0-9]{1,2})?)\/\s*[0-9]\/[0-9]\/[0-9]\b/i, // 99.35/9/8/9 format
   ];
   for (const p of percentilePatterns) {
     const m = text.match(p);
@@ -368,16 +448,16 @@ function regexExtractProfile(text: string, collegeId: string): ExtractedProfile 
     workExperience = '0';
   } else {
     const wexPatterns = [
-      /(?:work\s*ex(?:perience)?|wex)\s*(?:of\s*|[:\-=])?\s*(\d+)\s*(months?|yrs?|years?)/i,
-      /(\d+)\s*months?\s*(?:of\s*)?(?:work\s*ex(?:perience)?|wex)/i,
-      /(\d+)\s*(?:yrs?|years?)\s*(?:of\s*)?(?:work\s*ex(?:perience)?|experience)/i,
+      /(?:work\s*ex(?:perience)?|wex)\s*(?:of\s*|[:\-=])?\s*(\d+(?:\.\d+)?)\s*(months?|yrs?|years?)/i,
+      /(\d+(?:\.\d+)?)\s*months?\s*(?:of\s*)?(?:work\s*ex(?:perience)?|wex)/i,
+      /(\d+(?:\.\d+)?)\s*(?:yrs?|years?)\s*(?:of\s*)?(?:work\s*ex(?:perience)?|experience)/i,
     ];
     for (const p of wexPatterns) {
       const m = text.match(p);
       if (m) {
-        const num = parseInt(m[1], 10);
+        const num = parseFloat(m[1]);
         const unit = (m[2] ?? 'months').toLowerCase();
-        workExperience = unit.startsWith('y') ? String(num * 12) : String(num);
+        workExperience = unit.startsWith('y') ? String(Math.round(num * 12)) : String(Math.round(num));
         break;
       }
     }
@@ -559,6 +639,9 @@ Interviewer labels include:
 - P1, P2
 - F1, F2
 - I1, I2
+- M, F
+- M
+- F
 - "Interviewer", "Panelist"
 - Numeric (1, 2)
 - Mixed formats (e.g. "M1:", "P2 -", "M:")
@@ -625,6 +708,7 @@ async function callGemini(postText: string): Promise<ExtractedProfile | null> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (res.status === 429) {
@@ -655,8 +739,18 @@ async function callGemini(postText: string): Promise<ExtractedProfile | null> {
       if (!Array.isArray(parsed.qna)) parsed.qna = [];
 
       return parsed;
-    } catch (err) {
-      console.warn(`[Gemini] Parse/network error: ${err instanceof Error ? err.message : err}`);
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const cause = err?.cause ? ` (Cause: ${err.cause})` : '';
+      console.warn(`[Gemini] Parse/network error: ${msg}${cause}`);
+
+      // Retry on common transient network errors
+      if (attempt < 3 && (msg.includes('fetch failed') || msg.includes('timeout') || err.name === 'AbortError')) {
+        console.log(`[Gemini] Retrying transient error (attempt ${attempt + 1})...`);
+        await sleep(waitMs);
+        waitMs *= 2;
+        continue;
+      }
       return null;
     }
   }
@@ -704,7 +798,7 @@ async function redditSearch(
   after?: string,
 ): Promise<{ posts: RedditPost[]; after?: string }> {
   const p = new URLSearchParams({
-    q: query, restrict_sr: '1', sort: 'new', limit: '100', t: 'all', type: 'link',
+    q: query, restrict_sr: '1', sort: 'new', limit: '100', t: 'all', type: 'link', raw_json: '1',
   });
   if (after) p.set('after', after);
   const data = await redditFetch(
@@ -720,7 +814,7 @@ async function redditSubredditPage(
   sort: 'new' | 'top',
   after?: string,
 ): Promise<{ posts: RedditPost[]; after?: string }> {
-  const p = new URLSearchParams({ limit: '100', t: 'all' });
+  const p = new URLSearchParams({ limit: '100', t: 'all', raw_json: '1' });
   if (after) p.set('after', after);
   const data = await redditFetch(
     `https://www.reddit.com/r/CATpreparation/${sort}.json?${p}`,
@@ -775,7 +869,11 @@ async function collectCandidatePosts(): Promise<RedditPost[]> {
         console.log(`[Collect] r/CATpreparation ${sort} page ${page + 1}/8`);
         try {
           const { posts, after: next } = await redditSubredditPage(sort, after);
-          add(posts);
+          const filtered = posts.filter(p => isPotentialTranscriptTitle(p.title ?? ''));
+          if (posts.length > filtered.length) {
+            console.log(`[Collect] Filtered ${posts.length - filtered.length} noisy posts from page`);
+          }
+          add(filtered);
           if (!next) break;
           after = next;
         } catch (err) {
@@ -791,23 +889,17 @@ async function collectCandidatePosts(): Promise<RedditPost[]> {
 
   // ── 2. Targeted Reddit search queries ─────────────────────────────────────
   const searchQueries = [
-    // IIM Ahmedabad only
     'IIM Ahmedabad interview transcript',
     'IIMA interview transcript',
     'IIM A interview transcript',
-    'IIM A Interview Transcript',
     'IIM Ahmedabad pi transcript',
     'IIMA pi experience',
     'IIM Ahmedabad gdpi experience',
-    'IIMA WAT experience',
     'IIM Ahmedabad interview experience',
     'IIM A transcript',
-    'IIMA GDPI transcript',
+    'IIMA Detailed Transcript',
     'IIM Ahemdabad interview transcript',
     'My IIM Ahmedabad Interview Transcript',
-    'IIMA Detailed Transcript',
-    'IIM-A Interview Transcript',
-    'IIMA Interview Transcript 2025',
     'My IIM Ahmedabad (stress) Interview',
     'IIMA Interview Experience'
   ];
@@ -895,7 +987,7 @@ async function collectCandidatePosts(): Promise<RedditPost[]> {
 async function fetchFullPost(permalink: string): Promise<string> {
   if (redditCircuitOpen) return '';
   try {
-    const url = `https://www.reddit.com${permalink}.json?limit=1`;
+    const url = `https://www.reddit.com${permalink}.json?limit=1&raw_json=1`;
     const res = await fetch(url, {
       headers: { 'User-Agent': REDDIT_UA, Accept: 'application/json' },
       signal: AbortSignal.timeout(10_000),
@@ -1039,21 +1131,18 @@ async function startScraping() {
       }
     }
 
-    // ── Gate 1: is it likely a transcript? ──────────────────────────────────
-    // If selftext is empty/short, skip — we never re-fetch individual posts
-    // to avoid Reddit rate limits. PullPush already returns fuller content.
+    // ── Gate 1: candidate filter ────────────────────────────────────────────
     if (!isLikelyTranscript(title, selftext)) continue;
     counts.filtered++;
 
     // ── Gate 2: college detection ────────────────────────────────────────────
-    const fullBody = selftext;  // selftext already hydrated above
+    const fullBody = selftext;
     const collegeId = detectCollege(title, fullBody);
     if (!collegeId) { counts.noCollege++; continue; }
 
-    // Pass title + selftext body only to Gemini — not comments or noise
     const postText = `Title: ${title}\n\n${fullBody}`;
 
-    // ── Gate 3: Gemini extraction (with regex fallback) ──────────────────────
+    // ── Gate 3: Gemini extraction (ALWAYS for candidates) ────────────────────
     let profile: ExtractedProfile;
 
     const geminiResult = await callGemini(postText);
@@ -1071,11 +1160,18 @@ async function startScraping() {
       );
     }
 
-    // ── Gate 4: strict final quality check before DB save ───────────────────
+    // ── Gate 4: validation (light check after extraction) ───────────────────
     if (!hasValidSavedTranscriptShape(postText, profile)) {
-      counts.rejectedQuality++;
-      console.log(`[Skip] [${collegeId}] weak transcript shape — ${title.slice(0, 70)}`);
-      continue;
+      // If title is strong, we should save even if extraction found nothing,
+      // BUT we still require at least one dialogue turn (interviewer/candidate line).
+      const turns = interviewerTurnCount(postText);
+      if (isStrongTitle(title) && turns > 0) {
+        console.log(`[Save/StrongTitle] [${collegeId}] keeping because title is high-confidence — ${title.slice(0, 70)}`);
+      } else {
+        counts.rejectedQuality++;
+        console.log(`[Skip] [${collegeId}] weak transcript shape/no dialogue — ${title.slice(0, 70)}`);
+        continue;
+      }
     }
 
     // ── Save ─────────────────────────────────────────────────────────────────

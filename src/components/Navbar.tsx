@@ -32,9 +32,22 @@ export default function Navbar({ isLoggedIn = false }: { isLoggedIn?: boolean })
         </nav>
         <div className={styles.authActions}>
           {isLoggedIn ? (
-            <div className={`${styles.link} ${styles.active}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <User size={18} />
-              <span>Profile</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div className={`${styles.link} ${styles.active}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'default' }}>
+                <User size={18} />
+                <span>Profile</span>
+              </div>
+              <button 
+                onClick={async () => {
+                  const { logoutAction } = await import('@/app/auth/actions');
+                  await logoutAction();
+                  window.location.reload();
+                }}
+                className="btn btn-secondary"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              >
+                Logout
+              </button>
             </div>
           ) : (
             <>

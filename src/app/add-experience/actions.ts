@@ -12,6 +12,23 @@ export async function addExperienceAction(formDataRaw: any, _: any) {
   const userId = session.userId as string;
 
   try {
+    // Verify user exists in DB (to avoid foreign key violation if DB was reset)
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return { error: 'User not found. Please log out and log in again.' };
+    }
+
+    // Validate and parse numeric fields
+    const panelSize = parseInt(formDataRaw.panelSize, 10);
+    if (isNaN(panelSize)) {
+      return { error: 'Invalid panel size.' };
+    }
+
+    const interviewDate = new Date(formDataRaw.date);
+    if (isNaN(interviewDate.getTime())) {
+      return { error: 'Invalid interview date.' };
+    }
+
     const newTranscript = await prisma.transcript.create({
       data: {
         collegeId: formDataRaw.collegeId,
@@ -20,8 +37,8 @@ export async function addExperienceAction(formDataRaw: any, _: any) {
         gender: formDataRaw.gender,
         catPercentile: formDataRaw.catPercentile,
         workExperience: formDataRaw.workExperience || 'NA',
-        panelSize: parseInt(formDataRaw.panelSize, 10),
-        date: new Date(formDataRaw.date),
+        panelSize: panelSize,
+        date: interviewDate,
         verdict: formDataRaw.verdict,
         anonymous: formDataRaw.anonymous === 'yes' || formDataRaw.anonymous === true,
         contactInfo: formDataRaw.contactInfo || null,
@@ -33,6 +50,6 @@ export async function addExperienceAction(formDataRaw: any, _: any) {
     return { success: true, id: newTranscript.id };
   } catch (error: any) {
     console.error('Error adding experience:', error);
-    return { error: 'Failed to submit transcript to the database.' };
+    return { error: `Submission failed: ${error.message || 'Database error'}` };
   }
 }
