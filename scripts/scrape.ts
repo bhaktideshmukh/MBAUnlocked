@@ -11,6 +11,9 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { SUPPORTED_COLLEGES, GLOBAL_NOISE } from './config';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -32,51 +35,64 @@ const ADDITIONAL_REDDIT_URLS = (process.env.ADDITIONAL_REDDIT_URLS ?? '')
   .filter(Boolean);
 
 // ---------------------------------------------------------------------------
-// Supported colleges — ONLY IIM-A and IIM-B
+// Blacklist Logic
 // ---------------------------------------------------------------------------
 
-interface CollegeConfig {
-  id: string;
-  name: string;
-  /** All lowercase aliases that, when found as whole words in a title/body, identify this college */
-  aliases: string[];
-  /** Aliases that must NOT trigger a match (other IIMs that share a prefix) */
-  noiseAliases: string[];
+interface Blacklist {
+  excluded_titles: string[];
 }
 
-const SUPPORTED_COLLEGES: CollegeConfig[] = [
-  {
-    id: 'iima',
-    name: 'IIM Ahmedabad',
-    aliases: [
-      'iim ahmedabad', 'iim-ahmedabad', 'iima', 'iim a',
-      'ahmedabad iim', 'iim(a)', 'iim ahemdabad', 'iim ahmedabad',
-    ],
-    noiseAliases: ['iimab', 'amritsar'],
-  },
-];
+const BLACKLIST_PATH = path.join(__dirname, 'blacklist.json');
+let blacklist: Blacklist = { excluded_titles: [] };
 
-/** These strings in a title immediately disqualify the post from any college match */
-const GLOBAL_NOISE = [
-  'iim c', 'iimc', 'calcutta', 'kolkata',
-  'iim l', 'iiml', 'lucknow',
-  'iim i', 'iimi', 'indore',
-  'iim k', 'iimk', 'kozhikode',
-  'iim b', 'iimb', 'bangalore', 'bengaluru',
-  'iim rohtak', 'iim shillong', 'iim udaipur', 'iim raipur', 'iim ranchi',
-  'iim kashipur', 'iim trichy', 'iim jammu', 'iim sirmaur', 'iim bodhgaya',
-  'iim nagpur', 'iim amritsar', 'iim visakhapatnam',
-  'xlri', 'fms', 'isb', 'spjimr', 'mdi', 'nmims', 'sibm', 'scmhrd',
-  'imi delhi', 'imi new delhi', 'cap', 'jap',
-  'iit b', 'iitb', 'bombay', 'sjmsom',
-  'iit d', 'iitd', 'dms iit',
-  'iit m', 'iitm', 'iit madras',
-  'iit k', 'iitk', 'iit kanpur',
-  'iit kgp', 'kharagpur',
-  'iit r', 'iitr', 'roorkee',
-  'nitie', 'iim mumbai',
-  'iift', 'tiss', 'irma', 'mica'
-];
+try {
+  if (fs.existsSync(BLACKLIST_PATH)) {
+    blacklist = JSON.parse(fs.readFileSync(BLACKLIST_PATH, 'utf-8'));
+    console.log(`[Blacklist] Loaded ${blacklist.excluded_titles.length} excluded titles.`);
+  }
+} catch (err) {
+  console.warn(`[Blacklist] Failed to load blacklist: ${err}`);
+}
+
+function isBlacklisted(title: string): boolean {
+  const normalizedTitle = title.trim().toLowerCase();
+  return blacklist.excluded_titles.some(
+    t => t.trim().toLowerCase() === normalizedTitle
+  );
+}
+
+async function cleanupBlacklistedTranscripts() {
+  if (blacklist.excluded_titles.length === 0) return;
+  console.log('[Blacklist] Running auto-cleanup...');
+  
+  let deletedCount = 0;
+  for (const title of blacklist.excluded_titles) {
+    // Search for transcripts where fullText starts with this title
+    const searchPattern = `${title.trim()}\n\n%`;
+    const transcripts = await prisma.transcript.findMany({
+      where: {
+        fullText: {
+          startsWith: title.trim(),
+        }
+      },
+      select: { id: true, contactInfo: true }
+    });
+
+    if (transcripts.length > 0) {
+      for (const t of transcripts) {
+        await prisma.transcript.delete({ where: { id: t.id } });
+        console.log(`[Blacklist] Deleted: ${t.contactInfo} ("${title.slice(0, 50)}...")`);
+        deletedCount++;
+      }
+    }
+  }
+  if (deletedCount > 0) console.log(`[Blacklist] Cleanup complete. Removed ${deletedCount} transcripts.`);
+}
+
+// ---------------------------------------------------------------------------
+// Supported colleges — Imported from config.ts
+// ---------------------------------------------------------------------------
+
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,6 +138,16 @@ function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 function normalise(s: string) { return s.replace(/\s+/g, ' ').trim(); }
 
 /**
+ * Removes unnecessary backslashes before special characters often added by 
+ * markdown escaping (e.g., \[ -> [, \_ -> _).
+ */
+function unescapeMarkdown(text: string): string {
+  if (!text) return text;
+  // Unescape common markdown escapes: \ followed by a punctuation character
+  return text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])/g, '$1');
+}
+
+/**
  * Escape a string for use inside a RegExp, then replace any whitespace run
  * with `\s+` so "iim bangalore" also matches "iim  bangalore".
  */
@@ -150,22 +176,21 @@ function detectCollege(title: string, body: string): string | null {
   const lowerFull = lowerTitle + ' ' + body.toLowerCase();
 
   // ── Step 0: Generic "Other College" Title Check ────────────────────────────
-  // If the title mentions "IIM [X]" or "IIT [X]" and it's not IIM A, reject.
-  // This prevents picking up "IIM Calcutta" or "IIT Bombay" even if not in noise list.
+  // If the title mentions "IIM [X]" or "IIT [X]" and it's not a supported college, reject.
 
-  // Check for any IIM [letter/name] that isn't IIM A
+  // Check for any IIM [letter/name]
   const iimMatch = lowerTitle.match(/\biim\s*([a-z]+)\b/);
   if (iimMatch) {
     const name = iimMatch[1].trim();
-    const isIIMA = SUPPORTED_COLLEGES.find(c => c.id === 'iima')?.aliases.some(a => a.includes(name));
-    if (!isIIMA && name.length > 0) return null;
+    const isSupportedIIM = SUPPORTED_COLLEGES.some(c => c.aliases.some(a => a.includes(name)));
+    if (!isSupportedIIM && name.length > 0) return null;
   }
 
   // Check for any IIT [name]
   if (lowerTitle.match(/\biit\b/)) {
-    // Unless it explicitly mentions "IIM A" in the title too, reject IIT titles
-    const hasIIMA = SUPPORTED_COLLEGES.find(c => c.id === 'iima')?.aliases.some(a => toWordBoundaryRegex(a).test(lowerTitle));
-    if (!hasIIMA) return null;
+    // Unless it explicitly mentions a supported college in the title too, reject IIT titles
+    const hasSupported = SUPPORTED_COLLEGES.some(c => c.aliases.some(a => toWordBoundaryRegex(a).test(lowerTitle)));
+    if (!hasSupported) return null;
   }
 
   // ── Step 1: title-level strict match ──────────────────────────────────────
@@ -211,14 +236,14 @@ function detectCollege(title: string, body: string): string | null {
   // ── Step 3: Specific "Converted" / "Rejected" Sentiment Check ───────────────
   // If a noise college is mentioned as "converted" or "joined", and the top supported 
   // college is NOT, reject. (Example: "IIM A reject, FMS convert")
-  const noiseConverted = GLOBAL_NOISE.some(n => 
+  const noiseConverted = GLOBAL_NOISE.some(n =>
     new RegExp(`(?:converted|into|joined|in at|finalized)\\s+${n}`, 'i').test(lowerFull) ||
     new RegExp(`${n}\\s+(?:converted|convert)`, 'i').test(lowerFull)
   );
-  
+
   if (noiseConverted) {
     const topSupportedConverted = new RegExp(`(?:converted|into|joined|in at|finalized)\\s+${topId}`, 'i').test(lowerFull) ||
-                                  new RegExp(`${topId}\\s+(?:converted|convert)`, 'i').test(lowerFull);
+      new RegExp(`${topId}\\s+(?:converted|convert)`, 'i').test(lowerFull);
     if (!topSupportedConverted) return null;
   }
 
@@ -332,12 +357,12 @@ function isPotentialTranscriptTitle(title: string): boolean {
     'pgp', 'fabm', 'stress', 'score'
   ];
   const hasKeyword = keywords.some(kw => lower.includes(kw));
-  
-  const isIIMA = SUPPORTED_COLLEGES.find(c => c.id === 'iima')?.aliases.some(a =>
-    toWordBoundaryRegex(a).test(lower)
-  ) ?? false;
 
-  return hasKeyword && isIIMA;
+  const isSupported = SUPPORTED_COLLEGES.some(c => c.aliases.some(a =>
+    toWordBoundaryRegex(a).test(lower)
+  ));
+
+  return hasKeyword && isSupported;
 }
 
 function isStrongTitle(title: string): boolean {
@@ -351,19 +376,27 @@ function isStrongTitle(title: string): boolean {
   ];
   const hasExplicitKeyword = explicitKeywords.some(kw => lower.includes(kw));
 
-  const isIIMA = SUPPORTED_COLLEGES.find(c => c.id === 'iima')?.aliases.some(a =>
+  const isSupported = SUPPORTED_COLLEGES.some(c => c.aliases.some(a =>
     toWordBoundaryRegex(a).test(lower)
-  ) ?? false;
+  ));
 
-  if (!isIIMA) return false;
+  if (!isSupported) return false;
+
+  // Negative indicators for titles that look like transcripts but are actually queries
+  const noiseKeywords = [
+    'form', 'letter', 'document', 'doc ', 'help', 'query', 'marks', 'score',
+    'percentile', 'profile', 'chance', 'convert?', 'join?', 'which one',
+    'suggest', 'request', 'anyone', 'ppl', 'people', 'advice'
+  ];
+  if (noiseKeywords.some(kw => lower.includes(kw))) return false;
 
   // If it has an explicit transcript keyword, it's strong
   if (hasExplicitKeyword) return true;
 
-  // Handle "IIM A Interview" or "Score my IIM A interview"
+  // Handle "[College] Interview" or "Score my [College] interview"
   const interviewKeywords = ['interview', 'pi ', ' pi', 'gdpi'];
   const hasInterview = interviewKeywords.some(kw => lower.includes(kw));
-  
+
   // Require interview keyword + some detail indicator
   const detailIndicators = ['detailed', 'gone bad', 'stress', 'experience', 'questions'];
   const hasDetail = detailIndicators.some(d => lower.includes(d));
@@ -373,12 +406,15 @@ function isStrongTitle(title: string): boolean {
 
 function isLikelyTranscript(title: string, body: string): boolean {
   const combined = `${title}\n${body}`;
-  if (combined.trim().length < MIN_CHARS) return false;
+  const textWithoutUrls = combined.replace(/https?:\/\/[^\s]+/g, '').trim();
+  if (textWithoutUrls.length < MIN_CHARS) return false;
 
   if (isStrongTitle(title)) return true;
 
   const lowerTitle = title.toLowerCase();
   const lowerBody = body.toLowerCase();
+
+  if (isBlacklisted(title)) return false;
 
   const hasKeyword = TRANSCRIPT_KEYWORDS.some(
     kw => lowerTitle.includes(kw) || lowerBody.includes(kw),
@@ -492,35 +528,7 @@ function regexExtractProfile(text: string, collegeId: string): ExtractedProfile 
 
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-/*
-const GEMINI_SYSTEM_PROMPT = `You are a structured data extractor for IIM interview transcripts posted on Reddit India.
 
-These posts are in a dialogue format where interviewers are labelled M1, M2, P1, P2 etc. and the candidate is labelled "Me" or "A" or "X".
-
-Extract the following and return ONLY valid JSON — no markdown fences, no commentary.
-
-JSON shape:
-{
-  "catPercentile": "<CAT percentile as string e.g. '99.35', or 'NA'>",
-  "gender": "<Male | Female | NA>",
-  "gradField": "<Engineer | Commerce | Arts | Science | Medical | Law | NA>",
-  "category": "<General | OBC | NC-OBC | SC | ST | EWS>",
-  "workExperience": "<total months as string e.g. '54' for 4.5 years, or '0' for fresher, or 'NA'>",
-  "verdict": "<Converted | Waitlisted | Rejected | NA>",
-  "qna": [
-    { "q": "<interviewer question — attribute to M1/M2/P1/P2 if clear>", "a": "<candidate answer>" }
-  ]
-}
-
-Rules:
-- The profile header (before dialogue starts) contains: percentile, gender, category, B.tech/degree, workex years.
-- Extract ALL M1/M2/P1/P2 question-answer dialogue turns — do not skip any.
-- workExperience: convert years to months (e.g. 4.5 years = 54 months). Fresher = '0'.
-- catPercentile: must be 50–100 range. Look for patterns like '99.35' or '99.35/ 9/8/9' (only first number is percentile).
-- verdict: look at end of post for 'converted', 'waitlisted', 'rejected', or in a comment like 'EDIT: Converted'.
-- category: look for NC-OBC, OBC, SC, ST, EWS, General. NC-OBC is a subtype of OBC — store as 'NC-OBC'.
-- Return ONLY the JSON object.`;
-*/
 const GEMINI_SYSTEM_PROMPT = `You are a high-precision structured data extractor for IIM interview transcripts posted on Reddit (r/CATpreparation, r/IndiaMBA, etc.).
 
 These posts contain:
@@ -642,12 +650,14 @@ Interviewer labels include:
 - M, F
 - M
 - F
-- "Interviewer", "Panelist"
+- "Interviewer", "Panelist", "Prof", "Professor"
 - Numeric (1, 2)
 - Mixed formats (e.g. "M1:", "P2 -", "M:")
+- Real names or initials (e.g. "Rahul:", "Dr. Singh:", "AB:")
 
 Candidate labels include:
 - Me, A, Ans, Candidate, X
+- Author's real name
 
 Rules:
 - Each Q must be paired with its correct answer
@@ -687,7 +697,8 @@ FINAL OUTPUT
 
 - Return ONLY valid JSON
 - Ensure proper escaping of quotes
-- Ensure no trailing commas`;
+- Ensure no trailing commas
+- CRITICAL: Do NOT escape brackets, underscores, or other characters with backslashes (e.g., use "[text]" NOT "\[text\]")`;
 
 async function callGemini(postText: string): Promise<ExtractedProfile | null> {
   if (!GEMINI_API_KEY) return null;
@@ -733,6 +744,19 @@ async function callGemini(postText: string): Promise<ExtractedProfile | null> {
       // Strip any accidental markdown fences
       const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
       const parsed = JSON.parse(cleaned) as ExtractedProfile;
+
+      // Post-process: Unescape any leftover markdown escapes Gemini might have added
+      parsed.catPercentile = unescapeMarkdown(parsed.catPercentile);
+      parsed.gender = unescapeMarkdown(parsed.gender);
+      parsed.category = unescapeMarkdown(parsed.category);
+      parsed.gradField = unescapeMarkdown(parsed.gradField);
+      parsed.verdict = unescapeMarkdown(parsed.verdict);
+      if (Array.isArray(parsed.qna)) {
+        parsed.qna = parsed.qna.map(pair => ({
+          q: unescapeMarkdown(pair.q),
+          a: unescapeMarkdown(pair.a)
+        }));
+      }
 
       // Validate minimal shape
       if (typeof parsed !== 'object' || !('verdict' in parsed)) return null;
@@ -888,24 +912,28 @@ async function collectCandidatePosts(): Promise<RedditPost[]> {
   }
 
   // ── 2. Targeted Reddit search queries ─────────────────────────────────────
-  const searchQueries = [
-    'IIM Ahmedabad interview transcript',
-    'IIMA interview transcript',
-    'IIM A interview transcript',
-    'IIM Ahmedabad pi transcript',
-    'IIMA pi experience',
-    'IIM Ahmedabad gdpi experience',
-    'IIM Ahmedabad interview experience',
-    'IIM A transcript',
-    'IIMA Detailed Transcript',
-    'IIM Ahemdabad interview transcript',
-    'My IIM Ahmedabad Interview Transcript',
-    'My IIM Ahmedabad (stress) Interview',
-    'IIMA Interview Experience'
-  ];
+  // Dynamically generate search queries for all supported colleges
+  const searchQueries: string[] = [];
+  for (const c of SUPPORTED_COLLEGES) {
+    const mainAlias = c.aliases[0] || c.name;
+    const shortAlias = c.id.toUpperCase(); // e.g., IIMA, IIMB, XLRI
+    searchQueries.push(`${c.name} interview transcript`);
+    searchQueries.push(`${shortAlias} interview transcript`);
+    searchQueries.push(`${mainAlias} pi transcript`);
+    searchQueries.push(`${shortAlias} pi experience`);
+    searchQueries.push(`${c.name} gdpi experience`);
+    searchQueries.push(`${c.name} interview experience`);
+    searchQueries.push(`${shortAlias} transcript`);
+    searchQueries.push(`${shortAlias} Detailed Transcript`);
+    searchQueries.push(`My ${c.name} Interview Transcript`);
+    searchQueries.push(`${shortAlias} Interview Experience`);
+  }
+  
+  // Deduplicate and filter empty queries
+  const uniqueSearchQueries = [...new Set(searchQueries)].filter(Boolean);
 
   if (!redditCircuitOpen) {
-    for (const query of searchQueries) {
+    for (const query of uniqueSearchQueries) {
       if (redditCircuitOpen) {
         console.warn('[Collect] Stopping Reddit search phase due to active rate-limit circuit.');
         break;
@@ -930,17 +958,20 @@ async function collectCandidatePosts(): Promise<RedditPost[]> {
   }
 
   // ── 3. PullPush historical search ─────────────────────────────────────────
-  const pullpushQueries = [
-    'IIMA interview transcript',
-    'IIM Ahmedabad interview',
-    'IIM A pi transcript',
-    'IIM A interview experience',
-    'iima gdpi',
-    'IIM Ahmedabad transcript',
-  ];
+  const pullpushQueries: string[] = [];
+  for (const c of SUPPORTED_COLLEGES) {
+    const shortAlias = c.id.toUpperCase();
+    pullpushQueries.push(`${shortAlias} interview transcript`);
+    pullpushQueries.push(`${c.name} interview`);
+    pullpushQueries.push(`${shortAlias} pi transcript`);
+    pullpushQueries.push(`${c.name} interview experience`);
+    pullpushQueries.push(`${shortAlias.toLowerCase()} gdpi`);
+    pullpushQueries.push(`${c.name} transcript`);
+  }
+  const uniquePullpushQueries = [...new Set(pullpushQueries)].filter(Boolean);
 
   console.log('[Collect] Fetching historical data via PullPush...');
-  for (const query of pullpushQueries) {
+  for (const query of uniquePullpushQueries) {
     const posts = await pullpushSearch(query);
     if (posts.length) {
       console.log(`[Collect] PullPush "${query}": ${posts.length} posts`);
@@ -1026,8 +1057,8 @@ async function saveTranscript(
   post: RedditPost,
   profile: ExtractedProfile,
 ): Promise<boolean> {
-  const title = (post.title ?? '').trim();
-  const selftext = (post.selftext ?? '').trim();
+  const title = unescapeMarkdown((post.title ?? '').trim());
+  const selftext = unescapeMarkdown((post.selftext ?? '').trim());
   const fullText = `${title}\n\n${selftext}`;
   const key = postKey(post.id);
 
@@ -1105,17 +1136,20 @@ async function startScraping() {
     console.log('[DB] Done.');
   }
 
+  // ── Auto-Cleanup Blacklisted ──────────────────────────────────────────────
+  await cleanupBlacklistedTranscripts();
+
   // ── Collect ────────────────────────────────────────────────────────────────
   const candidates = await collectCandidatePosts();
 
   // ── Filter → detect → extract → save ──────────────────────────────────────
   const counts = {
-    iima: 0,
     filtered: 0,
     noCollege: 0,
     geminiUsed: 0,
     saved: 0,
     rejectedQuality: 0,
+    byCollege: Object.fromEntries(SUPPORTED_COLLEGES.map(c => [c.id, 0]))
   };
 
   for (const post of candidates) {
@@ -1132,6 +1166,10 @@ async function startScraping() {
     }
 
     // ── Gate 1: candidate filter ────────────────────────────────────────────
+    if (isBlacklisted(title)) {
+      console.log(`[Blacklist] Skip: ${title.slice(0, 50)}...`);
+      continue;
+    }
     if (!isLikelyTranscript(title, selftext)) continue;
     counts.filtered++;
 
@@ -1141,6 +1179,16 @@ async function startScraping() {
     if (!collegeId) { counts.noCollege++; continue; }
 
     const postText = `Title: ${title}\n\n${fullBody}`;
+
+    // ── Gate 2.5: Deduplicate early to save Gemini API calls ─────────────────
+    const key = postKey(post.id);
+    const exists = await prisma.transcript.findFirst({
+      where: { contactInfo: key },
+    });
+    if (exists) {
+      console.log(`[Skip] Already in DB: ${post.id} — ${title.slice(0, 40)}`);
+      continue; // Skip already processed posts to save time
+    }
 
     // ── Gate 3: Gemini extraction (ALWAYS for candidates) ────────────────────
     let profile: ExtractedProfile;
@@ -1162,10 +1210,9 @@ async function startScraping() {
 
     // ── Gate 4: validation (light check after extraction) ───────────────────
     if (!hasValidSavedTranscriptShape(postText, profile)) {
-      // If title is strong, we should save even if extraction found nothing,
-      // BUT we still require at least one dialogue turn (interviewer/candidate line).
-      const turns = interviewerTurnCount(postText);
-      if (isStrongTitle(title) && turns > 0) {
+      // If title is strong, we should save even if extraction found nothing
+      // We no longer require dialogue turns if the title is strong.
+      if (isStrongTitle(title)) {
         console.log(`[Save/StrongTitle] [${collegeId}] keeping because title is high-confidence — ${title.slice(0, 70)}`);
       } else {
         counts.rejectedQuality++;
@@ -1178,7 +1225,11 @@ async function startScraping() {
     try {
       if (await saveTranscript(collegeId, post, profile)) {
         counts.saved++;
-        if (collegeId === 'iima') counts.iima++;
+        if (counts.byCollege[collegeId] !== undefined) {
+          counts.byCollege[collegeId]++;
+        } else {
+          counts.byCollege[collegeId] = 1;
+        }
         console.log(`[Saved] [${collegeId}] #${counts.saved}`);
       }
     } catch (err) {
@@ -1186,7 +1237,6 @@ async function startScraping() {
     }
   }
 
-  // ── Summary ────────────────────────────────────────────────────────────────
   console.log('\n' + '='.repeat(60));
   console.log(' Scraping Complete');
   console.log('='.repeat(60));
@@ -1196,7 +1246,11 @@ async function startScraping() {
   console.log(`  Gemini extractions   : ${counts.geminiUsed}`);
   console.log(`  Rejected by quality  : ${counts.rejectedQuality}`);
   console.log(`  Total saved          : ${counts.saved}`);
-  console.log(`  └─ IIM Ahmedabad     : ${counts.iima}`);
+  for (const [colId, count] of Object.entries(counts.byCollege)) {
+    if (count > 0) {
+      console.log(`  └─ ${colId.toUpperCase().padEnd(16)} : ${count}`);
+    }
+  }
   console.log('='.repeat(60));
 }
 
