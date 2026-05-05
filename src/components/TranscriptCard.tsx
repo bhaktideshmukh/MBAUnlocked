@@ -53,7 +53,7 @@ export default function TranscriptCard({ t, highlight = false }: { t: any, highl
       
       <div className={styles.meta}>
         <span><Calendar size={14} /> Panel Size: {t.panelSize}</span>
-        <span>Date: {new Date(t.date).toLocaleDateString()}</span>
+        <span>Date: {new Date(t.date).toLocaleDateString('en-GB')}</span>
       </div>
 
       {isExpanded && (

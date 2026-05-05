@@ -1,23 +1,8 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
-
 export async function addExperienceAction(formDataRaw: any, _: any) {
-  const session = await getSession();
-  if (!session || !session.userId) {
-    return { error: 'Authentication required' };
-  }
-
-  const userId = session.userId as string;
-
   try {
-    // Verify user exists in DB (to avoid foreign key violation if DB was reset)
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return { error: 'User not found. Please log out and log in again.' };
-    }
-
     // Validate and parse numeric fields
     const panelSize = parseInt(formDataRaw.panelSize, 10);
     if (isNaN(panelSize)) {
@@ -42,7 +27,6 @@ export async function addExperienceAction(formDataRaw: any, _: any) {
         verdict: formDataRaw.verdict,
         anonymous: formDataRaw.anonymous === 'yes' || formDataRaw.anonymous === true,
         contactInfo: formDataRaw.contactInfo || null,
-        userId: userId,
         fullText: formDataRaw.fullText || null
       }
     });

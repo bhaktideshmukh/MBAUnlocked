@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from '@/app/page.module.css';
-import { ArrowRight, LockKeyhole } from 'lucide-react';
+import { ArrowRight, PlusCircle } from 'lucide-react';
 
 const COLLEGES = [
   '/images/colleges/iima.png',
@@ -56,7 +56,7 @@ export default function HeroSection() {
             Explore Transcripts <ArrowRight size={20} />
           </Link>
           <Link href="/add-experience" className={styles.btnSecondary}>
-            <LockKeyhole size={20} /> Share Your Experience
+            <PlusCircle size={20} /> Share Experience
           </Link>
         </div>
       </div>

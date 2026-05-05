@@ -405,6 +405,8 @@ function isStrongTitle(title: string): boolean {
 }
 
 function isLikelyTranscript(title: string, body: string): boolean {
+  if (isBlacklisted(title)) return false;
+
   const combined = `${title}\n${body}`;
   const textWithoutUrls = combined.replace(/https?:\/\/[^\s]+/g, '').trim();
   if (textWithoutUrls.length < MIN_CHARS) return false;
@@ -413,8 +415,6 @@ function isLikelyTranscript(title: string, body: string): boolean {
 
   const lowerTitle = title.toLowerCase();
   const lowerBody = body.toLowerCase();
-
-  if (isBlacklisted(title)) return false;
 
   const hasKeyword = TRANSCRIPT_KEYWORDS.some(
     kw => lowerTitle.includes(kw) || lowerBody.includes(kw),

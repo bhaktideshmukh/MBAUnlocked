@@ -13,11 +13,16 @@
 
 .heroBackground {
   position: absolute;
-  inset: 0;
+  top: -150px;
+  left: 0;
+  right: 0;
+  height: 1400px;
   z-index: -2;
-  opacity: 0.2;
-  filter: grayscale(80%) contrast(110%);
+  opacity: 0.3;
+  filter: grayscale(40%) contrast(110%);
   pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
 
 .heroBackground img {
@@ -33,7 +38,7 @@
   transform: translateX(-50%);
   width: 800px;
   height: 600px;
-  background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(10,10,10,0) 70%);
+  background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(10,10,10,0) 80%);
   z-index: -1;
   pointer-events: none;
 }
@@ -201,11 +206,9 @@
   min-width: 320px; /* Ensure equal and consistent size */
   display: flex;
   flex-direction: column;
-  background: #111;
+  background: transparent;
   padding: 2rem 1.5rem;
   position: relative;
-  border-left: 1px solid rgba(255, 255, 255, 0.05);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Sprocket holes effect */
