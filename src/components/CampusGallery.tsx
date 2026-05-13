@@ -8,6 +8,16 @@ const CAMPUS_IMAGES = [
   { src: '/images/campus/exchange.png', alt: 'Exchange Program', label: 'Global Exposure' },
   { src: '/images/campus/fest.png', alt: 'College Fest', label: 'Cultural Vibrancy' },
   { src: '/images/campus/library.png', alt: 'Library Study', label: 'Academic Excellence' },
+  { src: '/images/campus/sports.png', alt: 'Sports Events', label: 'Athletic Excellence' },
+  { src: '/images/campus/startup.png', alt: 'Startup Events', label: 'Entrepreneurship' },
+  { src: '/images/campus/music.png', alt: 'Music Clubs', label: 'Musical Talent' },
+  { src: '/images/campus/dance.png', alt: 'Dance Teams', label: 'Dance & Choreography' },
+  { src: '/images/campus/theatre.png', alt: 'Theatre', label: 'Dramatic Arts' },
+  { src: '/images/campus/photography.png', alt: 'Photography', label: 'Visual Arts' },
+  { src: '/images/campus/quiz.png', alt: 'Quiz Clubs', label: 'Intellectual Pursuits' },
+  { src: '/images/campus/unmaad.png', alt: 'Unmaad IIM B', label: 'Unmaad (IIM Bangalore)' },
+  { src: '/images/campus/kashiyatra.png', alt: 'Kashiyatra', label: 'Kashiyatra Fest' },
+  { src: '/images/campus/chaos.png', alt: 'Chaos IIM A', label: 'Chaos (IIM Ahmedabad)' },
 ];
 
 export default function CampusGallery() {

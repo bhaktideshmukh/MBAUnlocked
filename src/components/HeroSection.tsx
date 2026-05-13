@@ -4,27 +4,28 @@ import styles from '@/app/page.module.css';
 import { ArrowRight, PlusCircle } from 'lucide-react';
 
 const COLLEGES = [
+  '/images/colleges/fms.png',
   '/images/colleges/iima.png',
   '/images/colleges/iimb.png',
   '/images/colleges/iimc.png',
-  '/images/colleges/xlri.png',
-  '/images/colleges/fms.png',
-  '/images/colleges/isb.png',
+  '/images/colleges/iimi.png',
   '/images/colleges/iimk.png',
   '/images/colleges/iiml.png',
-  '/images/colleges/iimi.png',
   '/images/colleges/iimm.png',
+  '/images/colleges/iimnagpur.png',
   '/images/colleges/iimshillong.png',
+  '/images/colleges/iimudaipur.png',
+  '/images/colleges/iitb.png',
+  '/images/colleges/iitd.png',
+  '/images/colleges/isb.png',
   '/images/colleges/mdig.png',
   '/images/colleges/spjimr.png',
-  '/images/colleges/iitd.png',
-  '/images/colleges/iitb.png',
-  '/images/colleges/iimnagpur.png',
-  '/images/colleges/iimudaipur.png',
+  '/images/colleges/xlri.png',
 ];
 
-const ROLL_1 = COLLEGES.slice(0, 8);
-const ROLL_2 = COLLEGES.slice(8, 16);
+const midPoint = Math.ceil(COLLEGES.length / 2);
+const ROLL_1 = COLLEGES.slice(0, midPoint);
+const ROLL_2 = COLLEGES.slice(midPoint);
 
 export default function HeroSection() {
   return (

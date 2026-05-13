@@ -137,7 +137,7 @@ export const SUPPORTED_COLLEGES: CollegeConfig[] = [
     id: 'dms',
     name: 'IIT Delhi (DMS)',
     aliases: ['iit delhi', 'iitd', 'dms', 'dms iitd', 'department of management studies', 'delhi'],
-    noiseAliases: []
+    noiseAliases: ['imi', 'imi d', 'imi-d', 'imi-delhi', 'iift', 'iift d', 'iift-d', 'iift-delhi']
   },
   {
     id: 'tiss',
@@ -272,7 +272,6 @@ export const GLOBAL_NOISE = [
   'iim ranchi',
   'iim trichy', 'iim jammu', 'iim sirmaur', 'iim bodhgaya',
   'scmhrd',
-  'iit d', 'iitd', 'dms iit',
   'iit r', 'iitr', 'roorkee',
   'irma', 'mica',
   'sibmh', 'siu',
