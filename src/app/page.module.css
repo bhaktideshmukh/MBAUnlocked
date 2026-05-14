@@ -238,6 +238,8 @@
   flex-direction: column;
   gap: 1.5rem;
   width: 100%;
+  height: max-content;
+  flex-shrink: 0;
 }
 
 .filmRollUp {
