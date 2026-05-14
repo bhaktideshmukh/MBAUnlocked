@@ -135,6 +135,17 @@ let redditCircuitOpen = false;
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
+async function runConcurrent<T>(items: T[], concurrency: number, fn: (item: T) => Promise<void>) {
+  const queue = [...items];
+  const workers = Array(concurrency).fill(0).map(async (_, i) => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      if (item) await fn(item).catch(err => console.error(`[Worker ${i}] error:`, err));
+    }
+  });
+  await Promise.all(workers);
+}
+
 function normalise(s: string) { return s.replace(/\s+/g, ' ').trim(); }
 
 /**
@@ -1056,17 +1067,15 @@ async function saveTranscript(
   collegeId: string,
   post: RedditPost,
   profile: ExtractedProfile,
+  existingKeys: Set<string>
 ): Promise<boolean> {
   const title = unescapeMarkdown((post.title ?? '').trim());
   const selftext = unescapeMarkdown((post.selftext ?? '').trim());
   const fullText = `${title}\n\n${selftext}`;
   const key = postKey(post.id);
 
-  // Deduplicate: if we've already stored this Reddit post, skip
-  const exists = await prisma.transcript.findFirst({
-    where: { contactInfo: key },
-  });
-  if (exists) return false;
+  // Deduplicate using our pre-fetched Set
+  if (existingKeys.has(key)) return false;
 
   const created = await prisma.transcript.create({
     data: {
@@ -1098,6 +1107,7 @@ async function saveTranscript(
     });
   }
 
+  existingKeys.add(key);
   return true;
 }
 
@@ -1139,6 +1149,17 @@ async function startScraping() {
   // ── Auto-Cleanup Blacklisted ──────────────────────────────────────────────
   await cleanupBlacklistedTranscripts();
 
+  // ── Pre-fetch Deduplication Keys ─────────────────────────────────────────
+  console.log('[DB] Fetching existing records for deduplication...');
+  const existingRecords = await prisma.transcript.findMany({
+    where: { contactInfo: { startsWith: 'reddit:' } },
+    select: { contactInfo: true }
+  });
+  const existingKeys = new Set(
+    existingRecords.map(r => r.contactInfo).filter((c): c is string => c !== null)
+  );
+  console.log(`[DB] Found ${existingKeys.size} existing Reddit transcripts.`);
+
   // ── Collect ────────────────────────────────────────────────────────────────
   const candidates = await collectCandidatePosts();
 
@@ -1152,8 +1173,37 @@ async function startScraping() {
     byCollege: Object.fromEntries(SUPPORTED_COLLEGES.map(c => [c.id, 0]))
   };
 
-  for (const post of candidates) {
+  async function processCandidate(post: RedditPost) {
     const title = (post.title ?? '').trim();
+    const lowerTitle = title.toLowerCase();
+
+    // ── Gate 0: Early Deduplication & Rejections ─────────────────────────────
+    if (isBlacklisted(title)) {
+      console.log(`[Blacklist] Skip: ${title.slice(0, 50)}...`);
+      return;
+    }
+
+    const key = postKey(post.id);
+    if (existingKeys.has(key)) {
+      console.log(`[Skip] Already in DB: ${post.id} — ${title.slice(0, 40)}`);
+      return;
+    }
+
+    // Early noise rejection
+    if (hasNoise(lowerTitle)) return;
+
+    // Early unsupported IIM/IIT rejection (matches logic in detectCollege)
+    const iimMatch = lowerTitle.match(/\biim\s*([a-z]+)\b/);
+    if (iimMatch) {
+      const name = iimMatch[1].trim();
+      const isSupportedIIM = SUPPORTED_COLLEGES.some(c => c.aliases.some(a => a.includes(name)));
+      if (!isSupportedIIM && name.length > 0) return;
+    }
+    if (lowerTitle.match(/\biit\b/)) {
+      const hasSupported = SUPPORTED_COLLEGES.some(c => c.aliases.some(a => toWordBoundaryRegex(a).test(lowerTitle)));
+      if (!hasSupported) return;
+    }
+
     let selftext = (post.selftext ?? '').trim();
 
     // Hydrate full body for posts where listing/search payload is truncated/empty.
@@ -1166,29 +1216,15 @@ async function startScraping() {
     }
 
     // ── Gate 1: candidate filter ────────────────────────────────────────────
-    if (isBlacklisted(title)) {
-      console.log(`[Blacklist] Skip: ${title.slice(0, 50)}...`);
-      continue;
-    }
-    if (!isLikelyTranscript(title, selftext)) continue;
+    if (!isLikelyTranscript(title, selftext)) return;
     counts.filtered++;
 
     // ── Gate 2: college detection ────────────────────────────────────────────
     const fullBody = selftext;
     const collegeId = detectCollege(title, fullBody);
-    if (!collegeId) { counts.noCollege++; continue; }
+    if (!collegeId) { counts.noCollege++; return; }
 
     const postText = `Title: ${title}\n\n${fullBody}`;
-
-    // ── Gate 2.5: Deduplicate early to save Gemini API calls ─────────────────
-    const key = postKey(post.id);
-    const exists = await prisma.transcript.findFirst({
-      where: { contactInfo: key },
-    });
-    if (exists) {
-      console.log(`[Skip] Already in DB: ${post.id} — ${title.slice(0, 40)}`);
-      continue; // Skip already processed posts to save time
-    }
 
     // ── Gate 3: Gemini extraction (ALWAYS for candidates) ────────────────────
     let profile: ExtractedProfile;
@@ -1200,7 +1236,6 @@ async function startScraping() {
       console.log(
         `[Gemini] ✅ [${collegeId}] verdict=${profile.verdict} qna=${profile.qna.length}q — ${title.slice(0, 60)}`,
       );
-      await sleep(GEMINI_DELAY_MS);
     } else {
       profile = regexExtractProfile(postText, collegeId);
       console.log(
@@ -1210,20 +1245,18 @@ async function startScraping() {
 
     // ── Gate 4: validation (light check after extraction) ───────────────────
     if (!hasValidSavedTranscriptShape(postText, profile)) {
-      // If title is strong, we should save even if extraction found nothing
-      // We no longer require dialogue turns if the title is strong.
       if (isStrongTitle(title)) {
         console.log(`[Save/StrongTitle] [${collegeId}] keeping because title is high-confidence — ${title.slice(0, 70)}`);
       } else {
         counts.rejectedQuality++;
         console.log(`[Skip] [${collegeId}] weak transcript shape/no dialogue — ${title.slice(0, 70)}`);
-        continue;
+        return;
       }
     }
 
     // ── Save ─────────────────────────────────────────────────────────────────
     try {
-      if (await saveTranscript(collegeId, post, profile)) {
+      if (await saveTranscript(collegeId, post, profile, existingKeys)) {
         counts.saved++;
         if (counts.byCollege[collegeId] !== undefined) {
           counts.byCollege[collegeId]++;
@@ -1236,6 +1269,10 @@ async function startScraping() {
       console.warn(`[Save] Failed for ${post.id}: ${err instanceof Error ? err.message : err}`);
     }
   }
+
+  // Process all candidate posts concurrently
+  console.log('[Pipeline] Processing candidate posts...');
+  await runConcurrent(candidates, 10, processCandidate);
 
   console.log('\n' + '='.repeat(60));
   console.log(' Scraping Complete');
