@@ -73,11 +73,12 @@
   justify-content: flex-end;
   gap: 3rem;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   margin-right: -2rem;
   mask-image: linear-gradient(to bottom, black 95%, transparent);
   -webkit-mask-image: linear-gradient(to bottom, black 95%, transparent);
   margin-top: -4rem; /* Pull films up specifically */
+  pointer-events: none; /* Prevent accidental scrolling of the component itself */
 }
 
 @keyframes slideInLeft {
