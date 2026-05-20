@@ -1,102 +1,61 @@
-'use client';
+import Link from 'next/link';
+import { COLLEGES } from '@/lib/data';
+import styles from './dashboard.module.css';
+import { BookOpen, Sparkles, Share, ChevronRight, ArrowLeft } from 'lucide-react';
+import { notFound } from 'next/navigation';
 
-import { useState, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { COLLEGES, CATEGORIES, GRAD_FIELDS, GENDERS } from '@/lib/data';
-import styles from './questionnaire.module.css';
-import { ArrowRight, SkipForward } from 'lucide-react';
-
-export default function QuestionnairePage({ params }: { params: Promise<{ collegeId: string }> }) {
-  const { collegeId } = use(params);
-  const router = useRouter();
+export default async function CollegeDashboardPage({ params }: { params: Promise<{ collegeId: string }> }) {
+  const { collegeId } = await params;
   const college = COLLEGES.find(c => c.id === collegeId);
-  
-  const [formData, setFormData] = useState({
-    category: '',
-    gradField: '',
-    gender: '',
-    catPercentile: ''
-  });
 
   if (!college) {
-    return <div className={styles.error}>College not found</div>;
+    notFound();
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSkip = () => {
-    router.push(`/colleges/${collegeId}/transcripts`);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = new URLSearchParams(formData as any).toString();
-    router.push(`/colleges/${collegeId}/transcripts?${query}`);
-  };
-
   return (
-    <div 
-      className={styles.container} 
-      onClick={() => router.push('/colleges')}
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 80px)', background: 'rgba(0,0,0,0.5)', zIndex: 100 }}
-    >
-      <div 
-        className={styles.formCard}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.header}>
-          <h2>Profile Questionnaire</h2>
-          <p>Help us find the best interview transcripts for {college.name} based on your profile.</p>
-        </div>
+    <div className={styles.container}>
+      <Link href="/colleges" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '2rem', textDecoration: 'none' }}>
+        <ArrowLeft size={16} /> Back to Colleges
+      </Link>
+      
+      <div className={styles.header}>
+        <h1 className={styles.title}>{college.name}</h1>
+        <p className={styles.subtitle}>Welcome to the {college.id.toUpperCase()} dashboard. Choose an action below.</p>
+      </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.formGroup}>
-            <label>Category</label>
-            <select name="category" className="input-field" value={formData.category} onChange={handleChange}>
-              <option value="">Select Category</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+      <div className={styles.grid}>
+        <Link href={`/colleges/${collegeId}/explore`} className={styles.card} style={{ animationDelay: '0s' }}>
+          <div className={styles.cardIcon}>
+            <BookOpen size={32} />
           </div>
+          <div className={styles.cardContent}>
+            <h2>Explore Transcripts</h2>
+            <p>Read real interview experiences matching your profile.</p>
+          </div>
+          <ChevronRight className={styles.cardArrow} />
+        </Link>
 
-          <div className={styles.formGroup}>
-            <label>Graduation Field</label>
-            <select name="gradField" className="input-field" value={formData.gradField} onChange={handleChange}>
-              <option value="">Select Field</option>
-              {GRAD_FIELDS.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+        <Link href={`/colleges/${collegeId}/ai-mock`} className={styles.card} style={{ animationDelay: '0.1s' }}>
+          <div className={styles.cardIcon}>
+            <Sparkles size={32} />
           </div>
+          <div className={styles.cardContent}>
+            <h2>AI Predict Questions</h2>
+            <p>Generate highly probable interview questions for your profile using AI.</p>
+          </div>
+          <ChevronRight className={styles.cardArrow} />
+        </Link>
 
-          <div className={styles.formGroup}>
-            <label>Gender</label>
-            <select name="gender" className="input-field" value={formData.gender} onChange={handleChange}>
-              <option value="">Select Gender</option>
-              {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+        <Link href={`/add-experience?collegeId=${collegeId}`} className={styles.card} style={{ animationDelay: '0.2s' }}>
+          <div className={styles.cardIcon}>
+            <Share size={32} />
           </div>
-
-          <div className={styles.formGroup}>
-            <label>CAT Percentile</label>
-            <input 
-              type="text" 
-              name="catPercentile" 
-              placeholder="e.g. 99.5 or NA" 
-              className="input-field" 
-              value={formData.catPercentile} 
-              onChange={handleChange} 
-            />
+          <div className={styles.cardContent}>
+            <h2>Share Transcript</h2>
+            <p>Help future candidates by adding your own interview experience.</p>
           </div>
-
-          <div className={styles.actions}>
-            <button type="button" className="btn btn-secondary" onClick={handleSkip}>
-              Skip <SkipForward size={18} />
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Find Matches <ArrowRight size={18} />
-            </button>
-          </div>
-        </form>
+          <ChevronRight className={styles.cardArrow} />
+        </Link>
       </div>
     </div>
   );

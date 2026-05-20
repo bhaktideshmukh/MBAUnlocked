@@ -9,12 +9,14 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(uuid())
-  name         String
-  email        String       @unique
-  passwordHash String
-  transcripts  Transcript[]
-  createdAt    DateTime     @default(now())
+  id               String       @id @default(uuid())
+  name             String
+  email            String       @unique
+  passwordHash     String
+  transcripts      Transcript[]
+  aiGenerations    Int          @default(0)
+  aiLastResetAt    DateTime     @default(now())
+  createdAt        DateTime     @default(now())
 }
 
 model Transcript {
@@ -45,4 +47,18 @@ model QuestionAnswer {
   a            String
   transcriptId String
   transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+}
+
+model IpRateLimit {
+  ip          String   @id
+  generations Int      @default(0)
+  lastResetAt DateTime @default(now())
+}
+
+model AiPredictionCache {
+  id          String   @id @default(uuid())
+  profileHash String   @unique
+  collegeId   String
+  questions   Json
+  createdAt   DateTime @default(now())
 }

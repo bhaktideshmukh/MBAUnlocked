@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from '@/app/page.module.css';
-import { ArrowRight, PlusCircle } from 'lucide-react';
+import { ArrowRight, PlusCircle, Sparkles } from 'lucide-react';
 
 const COLLEGES = [
   '/images/colleges/fms.png',
@@ -55,6 +55,9 @@ export default function HeroSection() {
         <div className={styles.ctaGroup}>
           <Link href="/colleges" className={styles.btnPrimary}>
             Explore Transcripts <ArrowRight size={20} />
+          </Link>
+          <Link href="/ai-mock" className={styles.btnPrimary} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-color)', color: 'var(--foreground)', boxShadow: 'none' }}>
+            AI Predictor <Sparkles size={20} />
           </Link>
           <Link href="/add-experience" className={styles.btnSecondary}>
             <PlusCircle size={20} /> Share Experience
