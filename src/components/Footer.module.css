@@ -1,0 +1,51 @@
+.footer {
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem 0;
+  margin-top: auto;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.text {
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.link {
+  color: var(--text-primary, #ffffff);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.link:hover {
+  color: var(--primary-color, #3b82f6);
+}
+
+.iconLink {
+  color: var(--text-secondary, #a1a1aa);
+  transition: color 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconLink:hover {
+  color: #0077b5; /* LinkedIn brand color */
+  transform: translateY(-2px);
+}

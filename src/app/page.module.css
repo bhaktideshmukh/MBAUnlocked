@@ -306,7 +306,7 @@
   
   .heroRight {
     width: 100%;
-    height: 500px;
+    height: 300px;
     margin-right: 0;
     margin-top: 0;
     gap: 1rem;
@@ -321,7 +321,7 @@
   }
 
   .filmCard {
-    height: 200px;
+    height: 140px;
   }
 }
 
@@ -341,12 +341,12 @@
   }
 
   .heroRight {
-    height: 400px;
+    height: 200px;
     overflow: hidden;
   }
 
   .filmCard {
-    height: 150px;
+    height: 100px;
   }
 
   .ctaGroup {
