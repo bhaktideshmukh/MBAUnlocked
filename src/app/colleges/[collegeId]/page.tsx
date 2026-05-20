@@ -54,7 +54,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ colleg
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGroup}>
             <label>Category</label>
-            <select name="category" className="input-field" value={formData.category} onChange={handleChange} required>
+            <select name="category" className="input-field" value={formData.category} onChange={handleChange}>
               <option value="">Select Category</option>
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -62,7 +62,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ colleg
 
           <div className={styles.formGroup}>
             <label>Graduation Field</label>
-            <select name="gradField" className="input-field" value={formData.gradField} onChange={handleChange} required>
+            <select name="gradField" className="input-field" value={formData.gradField} onChange={handleChange}>
               <option value="">Select Field</option>
               {GRAD_FIELDS.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
@@ -70,7 +70,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ colleg
 
           <div className={styles.formGroup}>
             <label>Gender</label>
-            <select name="gender" className="input-field" value={formData.gender} onChange={handleChange} required>
+            <select name="gender" className="input-field" value={formData.gender} onChange={handleChange}>
               <option value="">Select Gender</option>
               {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
@@ -85,7 +85,6 @@ export default function QuestionnairePage({ params }: { params: Promise<{ colleg
               className="input-field" 
               value={formData.catPercentile} 
               onChange={handleChange} 
-              required 
             />
           </div>
 

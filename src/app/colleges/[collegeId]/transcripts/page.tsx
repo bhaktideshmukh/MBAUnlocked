@@ -22,13 +22,13 @@ export default async function TranscriptsPage({
 
   const sp = (await Promise.resolve(searchParams || {})) as Record<string, string | string[] | undefined>;
 
-  const cat = sp.category as string;
-  const grad = sp.gradField as string;
-  const gen = sp.gender as string;
-  const percentileStr = sp.catPercentile as string;
+  const cat = typeof sp.category === 'string' ? sp.category.trim() : '';
+  const grad = typeof sp.gradField === 'string' ? sp.gradField.trim() : '';
+  const gen = typeof sp.gender === 'string' ? sp.gender.trim() : '';
+  const percentileStr = typeof sp.catPercentile === 'string' ? sp.catPercentile.trim() : '';
 
   const hasProfile = Boolean(cat || grad || gen || percentileStr);
-  const userPercentile = percentileStr ? parseFloat(percentileStr) : null;
+  const userPercentile = percentileStr && !isNaN(parseFloat(percentileStr)) ? parseFloat(percentileStr) : null;
 
   // DB Fetch
   const dbTranscripts = await prisma.transcript.findMany({
@@ -39,9 +39,9 @@ export default async function TranscriptsPage({
   let scoredTranscripts = dbTranscripts.map(t => {
     let score = 0;
     if (hasProfile) {
-      if (t.category === cat) score += 10;
-      if (t.gradField === grad) score += 10;
-      if (t.gender === gen) score += 10;
+      if (cat && t.category === cat) score += 10;
+      if (grad && t.gradField === grad) score += 10;
+      if (gen && t.gender === gen) score += 10;
       if (userPercentile && t.catPercentile !== 'NA' && !isNaN(parseFloat(t.catPercentile)) && Math.abs(parseFloat(t.catPercentile) - userPercentile) <= 2) score += 5;
     }
     return { transcript: t, score };

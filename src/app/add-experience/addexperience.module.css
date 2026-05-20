@@ -180,3 +180,61 @@
   color: var(--text-muted);
   font-size: 1.1rem;
 }
+
+.transcriptGuide {
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.transcriptGuide[open] {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+}
+
+.guideSummary {
+  padding: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface-2);
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.guideSummary:hover {
+  background: var(--surface-3);
+  color: var(--accent-secondary);
+}
+
+.guideContent {
+  padding: 1rem 1.5rem;
+  background: var(--surface-1);
+  border-top: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.guideContent p {
+  margin-bottom: 0.75rem;
+}
+
+.sampleTranscriptText {
+  white-space: pre-wrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  background: var(--surface-2);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  color: var(--foreground);
+}

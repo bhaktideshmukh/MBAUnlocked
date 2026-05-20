@@ -3,28 +3,29 @@
 import { prisma } from '@/lib/prisma';
 export async function addExperienceAction(formDataRaw: any, _: any) {
   try {
-    // Validate and parse numeric fields
-    const panelSize = parseInt(formDataRaw.panelSize, 10);
+    // Parse panelSize (fallback to 2 if empty or invalid)
+    let panelSize = parseInt(formDataRaw.panelSize, 10);
     if (isNaN(panelSize)) {
-      return { error: 'Invalid panel size.' };
+      panelSize = 2;
     }
 
-    const interviewDate = new Date(formDataRaw.date);
-    if (isNaN(interviewDate.getTime())) {
-      return { error: 'Invalid interview date.' };
+    // Parse date (fallback to current date if empty or invalid)
+    let interviewDate = new Date(formDataRaw.date);
+    if (!formDataRaw.date || isNaN(interviewDate.getTime())) {
+      interviewDate = new Date();
     }
 
     const newTranscript = await prisma.transcript.create({
       data: {
         collegeId: formDataRaw.collegeId,
-        category: formDataRaw.category,
-        gradField: formDataRaw.gradField,
-        gender: formDataRaw.gender,
-        catPercentile: formDataRaw.catPercentile,
+        category: formDataRaw.category || 'NA',
+        gradField: formDataRaw.gradField || 'NA',
+        gender: formDataRaw.gender || 'NA',
+        catPercentile: formDataRaw.catPercentile || 'NA',
         workExperience: formDataRaw.workExperience || 'NA',
         panelSize: panelSize,
         date: interviewDate,
-        verdict: formDataRaw.verdict,
+        verdict: formDataRaw.verdict || 'Unknown',
         anonymous: formDataRaw.anonymous === 'yes' || formDataRaw.anonymous === true,
         contactInfo: formDataRaw.contactInfo || null,
         fullText: formDataRaw.fullText || null
