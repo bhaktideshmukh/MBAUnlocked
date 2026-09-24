@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { COLLEGES, CATEGORIES, GRAD_FIELDS, GENDERS } from '@/lib/data';
-import { Sparkles, Loader2, BookOpen } from 'lucide-react';
+import { Sparkles, Loader2, BookOpen, Upload, FileText, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function GlobalAIMockInterviewPage() {
@@ -22,12 +22,40 @@ export default function GlobalAIMockInterviewPage() {
     sop: ''
   });
 
+  const [cvFileName, setCvFileName] = useState('');
+  const [cvText, setCvText] = useState('');
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<string[]>([]);
   const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCvFileName(file.name);
+    const reader = new FileReader();
+
+    if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+      reader.onload = (event) => {
+        setCvText(event.target?.result as string || '');
+      };
+      reader.readAsText(file);
+    } else {
+      reader.onload = (event) => {
+        const buffer = event.target?.result as ArrayBuffer;
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(buffer);
+        const printableText = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ')
+                                  .replace(/\s+/g, ' ')
+                                  .trim();
+        setCvText(printableText.length > 30 ? printableText : `Resume File: ${file.name}`);
+      };
+      reader.readAsArrayBuffer(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +77,7 @@ export default function GlobalAIMockInterviewPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          cvText,
           targetCollege: college.name
         })
       });
@@ -153,6 +182,49 @@ export default function GlobalAIMockInterviewPage() {
           <div style={{ marginBottom: '2rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Family Background (Optional)</label>
             <textarea name="familyBackground" className="input-field" placeholder="e.g. Father is a businessman, mother is a homemaker. Have a family business in textiles." value={formData.familyBackground} onChange={handleChange} style={{ minHeight: '80px', resize: 'vertical' }} />
+          </div>
+
+          <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'var(--surface-2, rgba(255, 255, 255, 0.03))', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>
+              📄 Candidate Resume / CV (Optional, Recommended)
+            </label>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Upload your Resume file (.pdf, .txt, .doc, .docx) or paste its content below. The AI panel will analyze your projects, achievements, and technical details to generate targeted resume questions.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <label className="btn btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
+                <Upload size={16} /> Choose Resume File
+                <input 
+                  type="file" 
+                  accept=".pdf,.txt,.doc,.docx,.md" 
+                  onChange={handleFileUpload} 
+                  style={{ display: 'none' }} 
+                />
+              </label>
+              {cvFileName && (
+                <span style={{ fontSize: '0.875rem', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <FileText size={16} /> {cvFileName}
+                  <button 
+                    type="button" 
+                    onClick={() => { setCvFileName(''); setCvText(''); }} 
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: '0 0.25rem' }}
+                    title="Remove file"
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              )}
+            </div>
+
+            <textarea 
+              name="cvText" 
+              className="input-field" 
+              placeholder="Or paste your Resume / CV summary text directly here (Projects, Achievements, Work Experience details, Certifications, Key Technical Skills)..." 
+              value={cvText} 
+              onChange={(e) => setCvText(e.target.value)} 
+              style={{ minHeight: '110px', resize: 'vertical' }} 
+            />
           </div>
 
           <div style={{ marginBottom: '2rem' }}>

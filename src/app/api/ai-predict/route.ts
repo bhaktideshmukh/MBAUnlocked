@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { collegeId, category, gradField, gender, workEx, location, familyBackground, targetCollege, sop } = body;
+    const { collegeId, category, gradField, gender, workEx, location, familyBackground, targetCollege, sop, cvText } = body;
 
     if (!collegeId) {
       return NextResponse.json({ error: 'collegeId is required' }, { status: 400 });
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
         questions: [
           "Tell me about yourself and walk me through your resume.",
           `Why do you want to join ${targetCollege}?`,
+          cvText ? "Can you elaborate on the most impactful project listed in your CV?" : "Tell me about a major project you worked on.",
           `How does your background in ${gradField || 'your field'} help you in an MBA?`,
           "Can you explain a time you faced a difficult challenge at work or in college?",
           "Where do you see yourself in 5 years?",
@@ -44,9 +45,9 @@ export async function POST(req: Request) {
 
     // 1. Profile Caching
     // Create a deterministic hash/string of the profile to check if we already generated questions for this exact profile.
-    const profileString = `${collegeId}_${category}_${body.catPercentile}_${body.ugCollege}_${gradField}_${body.stream}_${body.academicScores}_${gender}_${workEx}_${body.companyName}_${sop}`.toLowerCase().replace(/\s+/g, '');
+    const profileString = `${collegeId}_${category}_${body.catPercentile}_${body.ugCollege}_${gradField}_${body.stream}_${body.academicScores}_${gender}_${workEx}_${body.companyName}_${sop}_${cvText}`.toLowerCase().replace(/\s+/g, '');
 
-    // Simple hash function (or just use the string if it's small enough, but let's hash it)
+    // Simple hash function (or just use the string if it's small enough, but let me hash it)
     const crypto = require('crypto');
     const profileHash = crypto.createHash('sha256').update(profileString).digest('hex');
 
@@ -79,13 +80,12 @@ export async function POST(req: Request) {
 Your task is to generate 8-10 highly probable, challenging interview questions tailored precisely to the candidate's profile.
 
 CRITICAL INSTRUCTIONS FOR QUESTION MIX:
-1. Academic Deep-Dive (2-3 Qs): Ask rigorous questions based on their Undergraduate Stream/Major (${gradField} / ${body.stream}). If they are engineers, ask application-based tech questions; if commerce, ask finance/econ questions.
-2. Work Experience / Internships (2-3 Qs): If they have work experience (${workEx}), ask highly specific situational questions about their industry or company (${body.companyName}).
-3. SOP / Application Answers (1-2 Qs): If provided, challenge their stated goals and motivations in their Statement of Purpose.
-4. Current Affairs / General Awareness (1-2 Qs): Ask about recent global or Indian economic/business news relevant to their background or the MBA.
-5. HR & Out-of-the-box (1-2 Qs): Ask behavioral, ethical dilemmas, or curveball questions designed to test their presence of mind.
-6. Questions on family background and location / hobbies / extracurriculars / interests (1-2 Qs)
-7. Core MBA subject questions: Finance, Marketing, Organizational Behavior, Operations, Economics, and Strategy (2 Qs)
+1. Candidate Resume / CV Deep-Dive (2-3 Qs): Probing, specific questions derived directly from their uploaded Resume / CV text below. Ask about specific projects, technical/domain skills, metrics achieved, certifications, or leadership roles mentioned in their CV.
+2. Academic Deep-Dive (2 Qs): Ask rigorous questions based on their Undergraduate Stream/Major (${gradField} / ${body.stream}). If they are engineers, ask application-based tech questions; if commerce, ask finance/econ questions.
+3. Work Experience / Internships (2 Qs): If they have work experience (${workEx}), ask highly specific situational questions about their industry or company (${body.companyName}).
+4. SOP / Application Answers (1-2 Qs): If provided, challenge their stated goals and motivations in their Statement of Purpose.
+5. Current Affairs & Business Domain (1-2 Qs): Ask about recent global or Indian economic/business news relevant to their background or the MBA.
+6. HR & Out-of-the-box (1 Q): Ask behavioral, ethical dilemmas, or curveball questions designed to test their presence of mind.
 
 Candidate Profile:
 - Target College: ${targetCollege}
@@ -99,6 +99,7 @@ Candidate Profile:
 - Hometown/Location: ${location || 'NA'}
 - Family Background: ${familyBackground || 'NA'}
 - Statement of Purpose (SOP) snippets: ${sop || 'Not provided'}
+- Candidate Resume / CV Content: ${cvText || 'Not provided'}
 
 CONTEXT FROM PAST TRANSCRIPTS:
 Below are actual past interview questions asked at ${targetCollege}. You MUST analyze the stylistic patterns, difficulty level, and typical topics from these past questions, and ensure your generated questions match this exact level of rigor and style.

@@ -29,7 +29,7 @@ Securing an interview call from premier Indian business schools (IIM Ahmedabad, 
   - **Academic Background**: Engineering, Commerce, Arts, Science, Medical
   - **Metrics**: CAT Percentile, Panel Size, Work Experience
   - **Verdict**: Converted, Waitlisted, Rejected
-- 🤖 **AI-Powered Question Generation**: Custom questions generated per profile based on real past patterns with built-in daily IP/user rate-limiting.
+- 🤖 **AI-Powered Question Generation**: Custom questions generated per profile based on real past patterns with candidate **Resume / CV file upload & deep-dive analysis**, SOP challenge questions, and built-in daily rate-limiting.
 - ✍️ **Community Contributions**: Submit your own interview experience with optional anonymity.
 - 🕷️ **Automated Scraping Pipeline**: Built-in Reddit scraper (`snoowrap` + custom parsers) to keep interview experiences up to date.
 - 🔐 **Privacy First**: Ephemeral profile processing for AI calls and secure password hashing (`bcryptjs` + JWT).
@@ -226,6 +226,3 @@ Contributions are welcome! If you find a bug, have an idea for a feature, or wan
 
 ---
 
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more details.
