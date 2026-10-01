@@ -23,6 +23,8 @@ export async function addExperienceAction(formDataRaw: any, _: any) {
         gender: formDataRaw.gender || 'NA',
         catPercentile: formDataRaw.catPercentile || 'NA',
         workExperience: formDataRaw.workExperience || 'NA',
+        companyName: formDataRaw.companyName || null,
+        hasMasters: formDataRaw.hasMasters === true || formDataRaw.hasMasters === 'true',
         panelSize: panelSize,
         date: interviewDate,
         verdict: formDataRaw.verdict || 'Unknown',

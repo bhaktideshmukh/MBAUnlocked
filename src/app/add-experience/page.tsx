@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { COLLEGES, CATEGORIES, GRAD_FIELDS, GENDERS } from '@/lib/data';
+import { COLLEGES, CATEGORIES, GENDERS } from '@/lib/data';
 import styles from './addexperience.module.css';
 import { Share2, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -18,6 +18,8 @@ export default function AddExperiencePage() {
     catPercentile: '',
     contactInfo: '',
     anonymous: false,
+    hasMasters: false,
+    companyName: '',
     verdict: 'Unknown',
     panelSize: 2,
     date: new Date().toISOString().split('T')[0],
@@ -106,13 +108,6 @@ export default function AddExperiencePage() {
               </select>
             </div>
             <div className={styles.formGroup}>
-              <label>Graduation Field</label>
-              <select name="gradField" className="input-field" value={formData.gradField} onChange={handleChange}>
-                <option value="">Select Field</option>
-                {GRAD_FIELDS.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div className={styles.formGroup}>
               <label>Gender</label>
               <select name="gender" className="input-field" value={formData.gender} onChange={handleChange}>
                 <option value="">Select Gender</option>
@@ -124,8 +119,22 @@ export default function AddExperiencePage() {
               <input type="text" name="catPercentile" className="input-field" value={formData.catPercentile} onChange={handleChange} placeholder="e.g. 99.5 or NA" />
             </div>
             <div className={styles.formGroup}>
+              <label>Graduation Field</label>
+              <input type="text" name="gradField" className="input-field" value={formData.gradField} onChange={handleChange} placeholder="e.g. BE in Computer science" />
+            </div>
+            <div className={styles.formGroup} style={{ justifyContent: 'center' }}>
+              <label className={styles.checkboxLabel} style={{ cursor: 'pointer', marginTop: 'auto', marginBottom: '0.25rem' }}>
+                <input type="checkbox" name="hasMasters" checked={formData.hasMasters} onChange={handleChange} />
+                Pursued / Have Master's Degree
+              </label>
+            </div>
+            <div className={styles.formGroup}>
               <label>Work Experience (Months or 0 if fresher)</label>
               <input type="text" name="workExperience" className="input-field" value={formData.workExperience} onChange={handleChange} placeholder="e.g. 0 for Fresher, or 24" />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Company Name</label>
+              <input type="text" name="companyName" className="input-field" value={formData.companyName} onChange={handleChange} placeholder="e.g. TCS, Amazon, or NA" />
             </div>
           </div>
         </section>

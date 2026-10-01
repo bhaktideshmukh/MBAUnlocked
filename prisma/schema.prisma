@@ -27,6 +27,8 @@ model Transcript {
   gender        String
   catPercentile String
   workExperience String @default("NA")
+  companyName   String?
+  hasMasters    Boolean            @default(false)
   panelSize     Int
   date          DateTime
   verdict       String

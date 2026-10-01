@@ -40,9 +40,9 @@ export const COLLEGES = [
   { id: 'iitm', name: 'IIT Madras' }
 ];
 
-export const CATEGORIES = ['General', 'OBC', 'SC', 'ST', 'EWS'];
+export const CATEGORIES = ['General', 'OBC', 'SC', 'ST', 'EWS', 'Pwd', 'NA'];
 export const GRAD_FIELDS = ['Engineer', 'Commerce', 'Arts', 'Science', 'Medical', 'Other'];
-export const GENDERS = ['Male', 'Female', 'Non-binary'];
+export const GENDERS = ['Male', 'Female', 'NA'];
 
 export type Transcript = {
   id: string;
@@ -55,6 +55,8 @@ export type Transcript = {
   date: string;
   verdict: 'Converted' | 'Waitlisted' | 'Rejected' | 'Unknown' | 'NA';
   workExperience?: string;
+  companyName?: string;
+  hasMasters?: boolean;
   questions: { q: string; a: string }[];
   anonymous?: boolean;
   contactInfo?: string;
