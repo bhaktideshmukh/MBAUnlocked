@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { COLLEGES, CATEGORIES, GRAD_FIELDS, GENDERS } from '@/lib/data';
+import { COLLEGES, CATEGORIES, GENDERS } from '@/lib/data';
 import { Sparkles, Loader2, BookOpen, Upload, FileText, X } from 'lucide-react';
 import Link from 'next/link';
 
@@ -136,10 +136,14 @@ export default function GlobalAIMockInterviewPage() {
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Graduation Field</label>
-              <select name="gradField" className="input-field" value={formData.gradField} onChange={handleChange}>
-                <option value="">Select Field</option>
-                {GRAD_FIELDS.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <input 
+                type="text" 
+                name="gradField" 
+                className="input-field" 
+                placeholder="e.g. BE in Computer science" 
+                value={formData.gradField} 
+                onChange={handleChange} 
+              />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Gender</label>
