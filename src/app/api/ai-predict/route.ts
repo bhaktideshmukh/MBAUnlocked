@@ -113,35 +113,26 @@ Return ONLY a valid JSON array of strings, where each string is a question. Exam
       // Fallback if no API key is set
       return NextResponse.json({
         questions: [
-          "Tell me about yourself.",
-          `Why do you want to join ${targetCollege}?`,
+          "Tell me about yourself and walk me through your resume.",
+          `Why do you want to pursue an MBA from ${targetCollege}?`,
           `How does your background in ${gradField || 'your field'} help you in an MBA?`,
-          "What is your biggest weakness?",
+          "What is your biggest weakness and how do you manage it?",
           "Where do you see yourself in 5 years?",
           "Why MBA and why now?",
-          "Who is the current CEO of the company you work for, and what are their major challenges?",
+          "Tell me about a time you demonstrated leadership.",
           "What is your opinion on the recent economic policies in India?",
-          "What is your opinion on the recent RBI monetary policy?",
-          "What is your opinion on the recent inflation?",
-          "What is your opinion on the recent recession?",
-          "What is your opinion on the recent employment rate?",
-          "What is your opinion on the recent global economy?",
-          "What is your opinion on the recent geopolitical situation?",
-          "What is your opinion on the recent climate change?",
-          "What is your opinion on the recent social issues?",
-          "What is your opinion on the recent political situation?",
-          "What is your opinion on the recent technological advancements?"
+          "How do you handle failure? Give an example."
         ]
       });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
+        systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: "Generate the questions based on the profile." }] }],
         generationConfig: {
           temperature: 0.7,
@@ -162,18 +153,9 @@ Return ONLY a valid JSON array of strings, where each string is a question. Exam
           "What are your strengths and weaknesses?",
           "Where do you see yourself in 5 years?",
           "Why MBA and why now?",
-          "Who is the current CEO of the company you work for, and what are their major challenges?",
+          "Tell me about a time you had to work with a difficult team member.",
           "What is your opinion on the recent economic policies in India?",
-          "What is your opinion on the recent RBI monetary policy?",
-          "What is your opinion on the recent inflation?",
-          "What is your opinion on the recent recession?",
-          "What is your opinion on the recent employment rate?",
-          "What is your opinion on the recent global economy?",
-          "What is your opinion on the recent geopolitical situation?",
-          "What is your opinion on the recent climate change?",
-          "What is your opinion on the recent social issues?",
-          "What is your opinion on the recent political situation?",
-          "What is your opinion on the recent technological advancements?"
+          "How do you plan to contribute to our alumni network?"
         ]
       });
     }
